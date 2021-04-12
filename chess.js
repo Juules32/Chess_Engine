@@ -130,6 +130,14 @@ class Piece {
             test_b[x][y] = temp
             test_b[x0][y0].x = x0
             test_b[x0][y0].y = y0
+
+                if (temp != "O" && this.color != temp.color) {
+                    legal_moves[i][2] = "x"
+                    legal_moves[i][3] = temp
+                }
+            
+            
+
         }
         return legal_moves
     }
@@ -276,7 +284,7 @@ class King extends PNK {
                 }
                 
                 if (b[8][king_y].first_move && b[7][king_y] == "O" && b[6][king_y] == "O" && !r_checked) {
-                    return [this.x+2, this.y]
+                    return [this.x+2, this.y, "rc"]
                 }
             }
             
@@ -305,7 +313,7 @@ class King extends PNK {
                     }
                 }
                 if (b[1][king_y].first_move && b[2][king_y] == "O" && b[3][king_y] == "O" && b[4][king_y] == "O" && !l_checked) {
-                    return [this.x-2, this.y]
+                    return [this.x-2, this.y, "lc"]
                 }
             }
         }
@@ -441,7 +449,7 @@ function update_all() {
 }
 
 
-code = "rnbqkbn1/pppppppp/8/8/8/8/PPPPPPP/RNBQK3"
+code = "rnbqkbn1/pppppppp/8/8/8/8/PPPPPPP/RNBQK2R"
 
 
 function FEN_generate(code, b) {
@@ -676,7 +684,8 @@ function find_legal_moves(c) {
                     if(b[i][j].color == "w") {
                         for (let p = 0; p < b[i][j].moves.length; p++) {
                             if (b[i][j].moves[p] != 0) {
-                                legal_moves.push([i, j, b[i][j].moves[p][0], b[i][j].moves[p][1]])
+                                legal_moves.push([i, j, b[i][j].moves[p][0], b[i][j].moves[p][1], b[i][j].moves[p][2], b[i][j].moves[p][3]])
+                                
                             }
                         }
                     }
@@ -692,7 +701,7 @@ function find_legal_moves(c) {
                 if (b[i][j] != "O") {
                     if(b[i][j].color == "b" && b[i][j].moves.length > 0) {
                         for (let p = 0; p < b[i][j].moves.length; p++) {
-                            legal_moves.push([i, j, b[i][j].moves[p][0], b[i][j].moves[p][1]])
+                            legal_moves.push([i, j, b[i][j].moves[p][0], b[i][j].moves[p][1], b[i][j].moves[p][2], b[i][j].moves[p][3]])
                             
                         }
                     }
@@ -744,7 +753,7 @@ function movegen(depth) {
         }
 
         let legal_moves = 0
-        if(depth % 2 == 0) {
+        if(depth % 2 == 1) {
             legal_moves = find_legal_moves("w")
         }
         else {
@@ -769,7 +778,8 @@ function movegen(depth) {
             numPositions += movegen(depth-1)
             console.log("hi")
             //undo
-            swap_pieces(lm[3],lm[4],lm[1],lm[2])
+            swap_pieces(legal_moves[i][2], legal_moves[i][3], legal_moves[i][0], legal_moves[i][1])
+
             /*if (ap == 1) {
                 ap = -1
             }
@@ -777,22 +787,22 @@ function movegen(depth) {
                 ap = 1
             }*/
             if (first_ques == true) {
-                b[lm[1]][lm[2]].first_move = true
+                b[legal_moves[i][0]][legal_moves[i][1]].first_move = true
             }
-            if (lm[5] != undefined) {
-                if (lm[5] == "x") {
-                    b[legal_moves[i][2]][legal_moves[i][3]] = lm[6]
+            if (legal_moves[i][4] != undefined) {
+                if (legal_moves[i][4] == "x") {
+                    b[legal_moves[i][2]][legal_moves[i][3]] = legal_moves[i][5]
                     //evt fix et kommende problem med first move
                 }
-                else if (lm[5] == "rc") {
+                else if (legal_moves[i][4] == "rc") {
     
-                    swap_pieces(6,lm[2],8,lm[2])
-                    b[8][lm[2]].first_move = true
+                    swap_pieces(6,legal_moves[i][1],8,legal_moves[i][1])
+                    b[8][legal_moves[i][1]].first_move = true
     
                 }
-                else if (lm[5] == "lc") {
-                    swap_pieces(4,lm[2],1,lm[2])
-                    b[1,lm[2]].first_move = true
+                else if (legal_moves[i][4] == "lc") {
+                    swap_pieces(4,legal_moves[i][1],1,legal_moves[i][1])
+                    b[1][legal_moves[i][1]].first_move = true
                 }
             }
             
@@ -804,6 +814,8 @@ function movegen(depth) {
     
     
 }
-console.log(movegen(2))
-//undo
 
+console.log(movegen(2))
+//console.log(movegen(2))
+//undo
+console.log(find_legal_moves("w"))
