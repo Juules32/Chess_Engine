@@ -119,8 +119,8 @@ class Piece {
             test_b[x][y].x = x
             test_b[x][y].y = y
             for (let j = 0; j < opponent_moves(test_b).length; j++) {
-                if(opponent_moves(test_b)[j][0] == king_position(test_b)[0] &&
-                opponent_moves(test_b)[j][1] == king_position(test_b)[1]) {
+                if(opponent_moves(test_b)[j][0] == king_position(test_b, this.color)[0] &&
+                opponent_moves(test_b)[j][1] == king_position(test_b, this.color)[1]) {
                     legal_moves.splice(i,1, [])
                     
                 }
@@ -252,13 +252,12 @@ class King extends PNK {
             start_moves.push([this.x+i, this.y+i])
             start_moves.push([this.x+i, this.y-i])
         }
-        
         return this.ruleCheck(start_moves)
     }
     get castle_r() {
-        let om = "wow"
         if (this.first_move) {
-            if (this.color = "w") {
+            let om = "wow"
+            if (this.color == "w") {
                 om = opponent_moves(b, "b")
             }
             else {
@@ -287,7 +286,13 @@ class King extends PNK {
     get castle_l() {
         
         if(this.first_move) {
-            let om = opponent_moves(b)
+            let om = "wow"
+            if (this.color == "w") {
+                om = opponent_moves(b, "b")
+            }
+            else {
+                om = opponent_moves(b, "w")
+            }
             let l_checked = false
             let king_y = 8
             if(this.color == "w") {
@@ -319,7 +324,8 @@ class King extends PNK {
         return moves
     }
     move(x, y) {
-        let king_y = this.y
+        let king_y = 8
+        if(this.color == "w") king_y = 1
             
         let first_question_mark = this.first_move
         super.move(x,y)
@@ -435,7 +441,7 @@ function update_all() {
 }
 
 
-code = "ppkppppp/pppppppp/8/8/8/8/PPPPppp/RNBQK2R"
+code = "rnbqkbn1/pppppppp/8/8/8/8/PPPPPPP/RNBQK3"
 
 
 function FEN_generate(code, b) {
@@ -531,16 +537,16 @@ function opponent_moves(b, color = "none") { //color er lavet hvis man vil finde
 
 
 
-function king_position(b) {
+function king_position(b, color) {
     for (let i = 0; i < 100; i++) {
         let x = i % 10
         let y = Math.floor(i/10)
-        if (ap == 1) {
-            if (b[x][y].abbreviation == "wk") {
+        
+            if (color == "w" && b[x][y].abbreviation == "wk") {
                 return [x,y]
             }
-        }
-        else if (b[x][y].abbreviation == "bk") {
+        
+        if (color == "b" && b[x][y].abbreviation == "bk") {
             return [x,y]
         }
         
@@ -738,7 +744,7 @@ function movegen(depth) {
         }
 
         let legal_moves = 0
-        if(depth % 2 == 1) {
+        if(depth % 2 == 0) {
             legal_moves = find_legal_moves("w")
         }
         else {
@@ -747,6 +753,8 @@ function movegen(depth) {
 
         let numPositions = 0
         console.log(legal_moves)
+        console.log(find_legal_moves("b"))
+
         let first_ques = false
         for (let i = 0; i < legal_moves.length; i++) {
             if(b[legal_moves[i][0]][legal_moves[i][1]].first_move == true) {
@@ -759,15 +767,15 @@ function movegen(depth) {
             
             
             numPositions += movegen(depth-1)
-            
+            console.log("hi")
             //undo
             swap_pieces(lm[3],lm[4],lm[1],lm[2])
-            if (ap == 1) {
+            /*if (ap == 1) {
                 ap = -1
             }
             else {
                 ap = 1
-            }
+            }*/
             if (first_ques == true) {
                 b[lm[1]][lm[2]].first_move = true
             }
@@ -796,7 +804,6 @@ function movegen(depth) {
     
     
 }
-
-console.log(movegen(1))
+console.log(movegen(2))
 //undo
 
