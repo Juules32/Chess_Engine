@@ -41,7 +41,7 @@ c.addEventListener('contextmenu', event => event.preventDefault());
 
 w = c.width
 h = c.height
-ts = h/8 //b[x+1][y+1] size
+ts = h/8 // tile size
 
 
 piece_names = ["Pee", "wp", "wn", "wb", "wr", "wq", "wk", "bk", "bq", "br", "bb", "bn", "bp"] //sorteres efter piece number value
@@ -66,32 +66,33 @@ function clear_board() {
     }
 }
 clear_board()
-console.log(b)
 
 v = {
-    "p": -1,
+    Hello: "You!",
     P: 1,
-    n: -2,
     N: 2,
-    b: -3,
     B: 3,
-    r: -4,
     R: 4,
-    q: -5,
     Q: 5,
+    K: 6,
     k: -6,
-    K: 6
+    q: -5,
+    r: -4,
+    b: -3,
+    n: -2,
+    p: -1
 }
 
-v_keys = Object.keys(v)
-v_values = Object.values(v)
+v = [0, "P", "N", "B", "R", "Q", "K", "k", "q", "r", "b", "n", "p"]
 
-console.log(v_keys)
+
+
 code = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
 
 
 function FEN_generate(code) {
+    let t0 = Date.now()
     clear_board()
     let x = 1
     let y = 9
@@ -102,8 +103,12 @@ function FEN_generate(code) {
             continue
         }
         else if (isNaN(code.charAt(i))) {
-            
-            b[y*10+x] = v_values[v_keys.indexOf(code.charAt(i))]
+            if(code.charAt(i).toUpperCase() == code.charAt(i)) {
+                b[y*10+x] = v.indexOf(code.charAt(i))
+            }
+            else {
+                b[y*10+x] = v.indexOf(code.charAt(i)) - v.length
+            }
 
             x += 1
         }
@@ -115,6 +120,8 @@ function FEN_generate(code) {
 
         
     }
+    let t1 = Date.now()
+    console.log(t1 - t0)
 }
 
 FEN_generate(code)
@@ -122,7 +129,6 @@ FEN_generate(code)
 console.log(b)
 
 function update() {
-    
 
     for (let i = 0; i < 9*8; i++) {
         let x = i % 9
@@ -139,25 +145,30 @@ function update() {
             let x = i % 10
             let y = Math.floor(i/10)
             if (Math.sign(b[i]) == 1) {
-                ctx.drawImage(images[b[i]], x*ts - ts, y*ts - 2*ts, ts, ts)
+                ctx.drawImage(images[b[i]], x*ts - ts, h - y*ts + ts, ts, ts)
+                continue
             }
             else {
-                ctx.drawImage(images[images.length + b[i]], x*ts - ts, y*ts - 2*ts, ts, ts)
-
+                ctx.drawImage(images[images.length + b[i]], x*ts - ts, h - y*ts + ts, ts, ts)
+                continue
             }
         }
-        else {
-            
-        }
     }
-    
+
 }
 
 window.onload = function() {update()}
 
+function mouse_to_b(mouse_x, mouse_y) {
+    return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
+}
 
-function mousemove () {
 
+function mousemove (event) {
+    update()
+    ctx.fillStyle = "blue"
+
+    ctx.fillText(mouse_to_b(event.x, event.y), event.x, event.y);
 }
 function mousedown () {
 
