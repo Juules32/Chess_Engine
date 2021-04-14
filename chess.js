@@ -1,4 +1,20 @@
 /*
+
+KONKLUSION FOR DENNE VERSION:
+Ikke godt at store x og y som adskilte værdier. bedre at nummerere tiles fra 0-63 (eller måske 1-64)
+Til undo: Husk ikke trækkene, men ændringerne ved board:
+gem info om de to tiles, det altid handler om ved move, og gem deres informationer før trækket
+Castling er den eneste exception
+https://softwareengineering.stackexchange.com/questions/188903/what-would-be-the-best-way-to-store-movements-on-a-game-to-allow-a-rollback
+
+Lav funktioner godt fra starten
+
+Naturligvis:
+Bedre udregning af castling
+ændr abrreviation
+måden rooks, bishops og queens adskilles på: 
+Skriv programmet med flere individuelle js filer
+
 TODO:
 
 
@@ -449,7 +465,7 @@ function update_all() {
 }
 
 
-code = "rnbqkbn1/pppppppp/8/8/8/8/PPPPPPP/RNBQK2R"
+code = "rnbqkbn1/pppppppp/8/8/8/8/PPPPPpPP/RNBQK2R"
 
 
 function FEN_generate(code, b) {
@@ -753,7 +769,7 @@ function movegen(depth) {
         }
 
         let legal_moves = 0
-        if(depth % 2 == 1) {
+        if(depth % 2 == 0) {
             legal_moves = find_legal_moves("w")
         }
         else {
@@ -815,7 +831,7 @@ function movegen(depth) {
     
 }
 
-console.log(movegen(2))
+console.log(movegen(1))
 //console.log(movegen(2))
 //undo
 console.log(find_legal_moves("w"))
