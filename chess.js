@@ -45,19 +45,6 @@ h = c.height
 ts = h/8 //b[x+1][y+1] size
 
 
-white_to_move = true
-//match moves
-mm = []
-//last move
-lm = ["EW", 110, 110, 110, 110]
-
-
-
-
-//active player
-ap = 1
-
-
 piece_names = ["wp", "wr", "wn", "wb", "wq", "wk", "bp", "br", "bn", "bb", "bq", "bk"]
 var images = []
 i = 0
