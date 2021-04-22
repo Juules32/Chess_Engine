@@ -21,6 +21,11 @@ all moves gør så man kan gå mere end ét træk tilbage
 
 
 Swap side ?
+
+
+
+find alle moves 1 gang i starten og find fremtidige moves ud fra ændringerne af positionen efter hvert træk for ikke at gentage mange ens trækfremfindinger
+til engine at tænke frem er det nemt at trace moves tilbage fordi man bare kan gemme positionen
 */
 
 
@@ -159,20 +164,60 @@ function update() {
 
 window.onload = function() {update()}
 
+function 
+
+
 function mouse_to_b(mouse_x, mouse_y) {
     return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
 }
 
+console.log(mouse_to_b(43,43))
+
+mouse_down = false
+var p
 
 function mousemove (event) {
+    
+    mouse_x = Math.floor((event.x - canvas_boundary.left)/ts) 
+    mouse_y = Math.floor((event.y - canvas_boundary.top)/ts)
+    let xy = mouse_to_b(event.x, event.y)
+
     update()
-    ctx.fillStyle = "blue"
 
-    ctx.fillText(mouse_to_b(event.x, event.y), event.x, event.y);
+    ctx.fillText(event.x + ", " + event.y, 10, 50);
+    if(mouse_down && b[down_xy] && b[down_xy] != 7) {
+        
+        /* Moves dots
+                for (let i = 0; i < active_piece_moves.length; i++) {
+                    ctx.fillStyle = "gray"
+                    ctx.beginPath();
+                    ctx.arc(active_piece_moves[i][0]*ts - ts/2, h - active_piece_moves[i][1]*ts + ts/2, ts/ 5, 0, 7);
+                    ctx.fill();
+                
+            }*/
+            if (down_x % 2 == 0) p = 1
+            else p = 0
+            if ((down_y + p) % 2 == 1) ctx.fillStyle = "white"
+            else ctx.fillStyle = "brown"
+            ctx.beginPath();
+            ctx.rect(down_x*ts, down_y*ts, ts, ts)
+            ctx.fill();
+            ctx.drawImage(images.slice(b[down_xy])[0],event.x - canvas_boundary.left - ts/2,event.y - canvas_boundary.top - ts/2,ts,ts)
+    }
 }
-function mousedown () {
+function mousedown (event) {
+    
+    mouse_down = true
 
+    down_x = mouse_x
+    down_y = mouse_y
+
+    down_xy = mouse_to_b(event.x,event.y)
+
+    
 }
 function mouseup () {
+    mouse_down = false
 
 }
+
