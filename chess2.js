@@ -164,7 +164,59 @@ function update() {
 
 window.onload = function() {update()}
 
-function 
+dir = 0
+
+//Array med possible moves for hver brik sorteret efter værdi
+
+function bishop_moves(tile) {
+    return 25
+}
+
+
+move_properties = ["Nul!",
+[9,10,11,20],
+[19,21,8,12,-8,-12,-19,-21],
+[tile => {
+    tile
+}],
+[bishop_moves],
+[tile => {
+    tile
+}],
+
+]
+
+move_properties = {
+    1: function(tile) {return[tile+9,tile+10,tile+11,tile+20]},
+    2: function(tile) {return [tile+19,tile+21,tile+8,tile+12,tile-8,tile-12,tile-19,tile-21]},
+    3: function(tile) {return tile},
+    4: function(tile) {return tile},
+    5: function(tile) {return tile},
+    6: function(tile) {return [tile+9,tile+10,tile+11,tile-1,tile+1,tile-9,tile-10,tile-11]},
+}
+
+console.log(move_properties[3](2))
+
+
+function pseudo_moves(tile) {
+    let type = Math.abs(b[tile])
+    dir = Math.sign(tile)
+    return move_properties[type](tile)
+}
+console.log(pseudo_moves(31))
+
+
+function unchecked_moves(moves) {
+
+}
+
+function checked_moves(moves) {
+
+}
+
+function all_moves(color) {
+
+}
 
 
 function mouse_to_b(mouse_x, mouse_y) {
