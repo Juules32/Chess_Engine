@@ -60,14 +60,18 @@ for (let i = 1; i < piece_names.length; i++) {
 console.log(piece_names[-1])
 
 b = []
+f = []
 
 function clear_board() {
     for (let i = 0; i < 120; i++) {
         if(i < 20 || i > 100 || i % 10 == 9 || i % 10 == 0) {
             b[i] = 7
+            f[i] = 7
         }
-        else b[i] = 0
-        
+        else {
+            b[i] = 0
+            f[i] = 0
+        }
     }
 }
 clear_board()
@@ -92,7 +96,7 @@ v = [0, "P", "N", "B", "R", "Q", "K", "k", "q", "r", "b", "n", "p"]
 
 
 
-code = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+code = "rnbqkbnr/pppppppp/8/8/2B5/8/PPP1PPPP/RNBQKBNR"
 
 
 
@@ -114,7 +118,7 @@ function FEN_generate(code) {
             else {
                 b[y*10+x] = v.indexOf(code.charAt(i)) - v.length
             }
-
+            f[y*10+x] = 1
             x += 1
         }
         else {
@@ -132,6 +136,7 @@ function FEN_generate(code) {
 FEN_generate(code)
 
 console.log(b)
+console.log(f)
 
 function update() {
 
@@ -164,7 +169,6 @@ function update() {
 
 window.onload = function() {update()}
 
-dir = 0
 
 //Array med possible moves for hver brik sorteret efter værdi
 
@@ -186,24 +190,85 @@ move_properties = ["Nul!",
 
 ]
 
-move_properties = {
-    1: function(tile) {return[tile+9,tile+10,tile+11,tile+20]},
-    2: function(tile) {return [tile+19,tile+21,tile+8,tile+12,tile-8,tile-12,tile-19,tile-21]},
-    3: function(tile) {return tile},
-    4: function(tile) {return tile},
-    5: function(tile) {return tile},
-    6: function(tile) {return [tile+9,tile+10,tile+11,tile-1,tile+1,tile-9,tile-10,tile-11]},
+function NK_moves(tile, moves, color) {
+    let legal_moves = []
+    moves.forEach(dir => {
+        let move = tile + dir
+        if(b[move] == 0 || Math.sign(b[move]) != color) {
+            legal_moves.push(move)
+        }
+        console.log(move)
+    })
+    
+    return legal_moves
 }
 
-console.log(move_properties[3](2))
+function P_moves(tile, color) {
+    let legal_moves = []
+    for (let i = -1; i < 2; i += 1) {
+        if(b[tile+10+i] && Math.sign(b[tile+10+i]) != color) {
+            legal_moves.push(tile+10+i)
+        }
+    }
+    if(!b[tile+(10*color)]) {
+        legal_moves.push(tile+(10*color))
+        if (f[tile] && !b[tile+(20*color)]) {
+            legal_moves.push(tile+(20*color))
+            
+        }
+    }
+    return legal_moves
+}
+
+function BRQ_moves(tile, directions, color) {
+    let legal_moves = []
+    directions.forEach(dir => {
+        let i = 0
+        console.log("pi")
+        while (true) {
+            i += 1
+
+            let dir_tile = tile + i*dir
+            console.log(i)
+
+            
+            if(b[dir_tile] == 0) {
+                legal_moves.push(dir_tile)
+                console.log("pe")
+                continue
+            } 
+
+            else if (b[dir_tile] == 7 || Math.sign(b[dir_tile]) == color) break
+
+            else if (Math.sign(b[dir_tile]) != color) {
+                legal_moves.push(dir_tile)
+                break
+            }
+        }
+    })
+
+    return legal_moves
+}
+
+
+move_properties = {
+    1: function(tile, color) {return P_moves(tile, color)},
+    2: function(tile, color) {return NK_moves(tile, [19, 21, 8, 12, -8, -12, -19, -21], color)},
+    3: function(tile, color) {return BRQ_moves(tile, [9, 11, -9, -11], color)},
+    4: function(tile, color) {return BRQ_moves(tile, [10, -1, 1, -10], color)},
+    5: function(tile, color) {return BRQ_moves(tile, [9, 11, -9, -11, 10, -1, 1, -10], color)},
+    6: function(tile, color) {return NK_moves(tile, [9, 10, 11, -1, 1, -9, -10, -11], color)},
+}
+
 
 
 function pseudo_moves(tile) {
     let type = Math.abs(b[tile])
-    dir = Math.sign(tile)
-    return move_properties[type](tile)
+    let color = Math.sign(b[tile])
+    console.log(type + ", " + color)
+    return move_properties[type](tile, color)
 }
-console.log(pseudo_moves(31))
+console.log(pseudo_moves(53))
 
 
 function unchecked_moves(moves) {
@@ -223,7 +288,6 @@ function mouse_to_b(mouse_x, mouse_y) {
     return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
 }
 
-console.log(mouse_to_b(43,43))
 
 mouse_down = false
 var p
@@ -235,8 +299,10 @@ function mousemove (event) {
     let xy = mouse_to_b(event.x, event.y)
 
     update()
+    ctx.font = "30px Arial";
+    ctx.fillStyle = "blue"
 
-    ctx.fillText(event.x + ", " + event.y, 10, 50);
+    ctx.fillText(mouse_to_b(event.x, event.y), event.x, event.y);
     if(mouse_down && b[down_xy] && b[down_xy] != 7) {
         
         /* Moves dots
