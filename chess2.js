@@ -28,7 +28,6 @@ find alle moves 1 gang i starten og find fremtidige moves ud fra ændringerne af
 til engine at tænke frem er det nemt at trace moves tilbage fordi man bare kan gemme positionen
 */
 
-
 c = document.getElementById("visuals")
 ctx = c.getContext("2d");
 c.width = 800
@@ -44,9 +43,14 @@ canvas_boundary = c.getBoundingClientRect()
 //Disables right click menu in canvas
 c.addEventListener('contextmenu', event => event.preventDefault());
 
-w = c.width
-h = c.height
-ts = h/8 // tile size
+const w = c.width
+const h = c.height
+const ts = h/8 // tile size
+
+//[start, slut, firstmove (1 or 0), capture/move/castle/promotion, captured piece/side of castling/promotion piece]
+
+lm = []
+mm = []
 
 
 piece_names = ["Pee", "wp", "wn", "wb", "wr", "wq", "wk", "bk", "bq", "br", "bb", "bn", "bp"] //sorteres efter piece number value
@@ -96,7 +100,7 @@ v = [0, "P", "N", "B", "R", "Q", "K", "k", "q", "r", "b", "n", "p"]
 
 
 
-code = "rnbqkbnr/pppppppp/8/8/2B5/8/PPP1PPPP/RNBQKBNR"
+code = "rnbqkbnr/pppppppp/8/8/1qQ5/8/PPP2PPP/RNBQKBNR"
 
 
 
@@ -191,63 +195,60 @@ move_properties = ["Nul!",
 ]
 
 function NK_moves(tile, moves, color) {
-    let legal_moves = []
+    let unchecked_moves = []
     moves.forEach(dir => {
         let move = tile + dir
         if(b[move] == 0 || Math.sign(b[move]) != color) {
-            legal_moves.push(move)
+            unchecked_moves.push(move)
         }
-        console.log(move)
     })
     
-    return legal_moves
+    return unchecked_moves
 }
 
 function P_moves(tile, color) {
-    let legal_moves = []
+    let unchecked_moves = []
     for (let i = -1; i < 2; i += 1) {
         if(b[tile+10+i] && Math.sign(b[tile+10+i]) != color) {
-            legal_moves.push(tile+10+i)
+            unchecked_moves.push(tile+10+i)
         }
     }
     if(!b[tile+(10*color)]) {
-        legal_moves.push(tile+(10*color))
+        unchecked_moves.push(tile+(10*color))
         if (f[tile] && !b[tile+(20*color)]) {
-            legal_moves.push(tile+(20*color))
+            unchecked_moves.push(tile+(20*color))
             
         }
     }
-    return legal_moves
+    console.log(unchecked_moves)
+    return unchecked_moves
 }
 
 function BRQ_moves(tile, directions, color) {
-    let legal_moves = []
+    let unchecked_moves = []
     directions.forEach(dir => {
         let i = 0
-        console.log("pi")
         while (true) {
             i += 1
 
             let dir_tile = tile + i*dir
-            console.log(i)
 
             
             if(b[dir_tile] == 0) {
-                legal_moves.push(dir_tile)
-                console.log("pe")
+                unchecked_moves.push(dir_tile)
                 continue
             } 
 
             else if (b[dir_tile] == 7 || Math.sign(b[dir_tile]) == color) break
 
             else if (Math.sign(b[dir_tile]) != color) {
-                legal_moves.push(dir_tile)
+                unchecked_moves.push(dir_tile)
                 break
             }
         }
     })
 
-    return legal_moves
+    return unchecked_moves
 }
 
 
@@ -260,29 +261,67 @@ move_properties = {
     6: function(tile, color) {return NK_moves(tile, [9, 10, 11, -1, 1, -9, -10, -11], color)},
 }
 
+function move(tile, destination) {
+    if (checked_moves(tile).indexOf(destination) != -1) {
+        
+    }
+}
 
 
 function pseudo_moves(tile) {
     let type = Math.abs(b[tile])
     let color = Math.sign(b[tile])
-    console.log(type + ", " + color)
     return move_properties[type](tile, color)
 }
-console.log(pseudo_moves(53))
 
+console.log(pseudo_moves(23))
+//hvad med castling? hvordan virker det med checked moves?
 
-function unchecked_moves(moves) {
-
+function checked_moves(tile) {
+    let t0 = Date.now()
+    let moves = pseudo_moves(tile)
+    let color = Math.sign(b[tile])
+    let legal_moves = moves
+    console.log(legal_moves)
+    let value = b[tile]
+    let index_change = 0
+    moves.forEach(move => {
+        let temp = b[move]
+        let move_deleted = false
+        b[move] = value
+        b[tile] = 0
+        
+        for (let i = 0; i < 120; i++) {
+            let piece = b[i]
+            if (piece != 0 && piece != 7 && Math.sign(b[piece]) != color) {
+                if (pseudo_moves(i).indexOf(b.indexOf(6*color)) != -1) {
+                    legal_moves.splice(legal_moves.indexOf(move))
+                }
+            }
+        }
+        b[move] = temp
+        b[tile] = value
+        //first move er ligegyldigt (?)
+    })
+    let t1 = Date.now()
+    console.log(t1-t0)
+    return legal_moves
 }
 
-function checked_moves(moves) {
+console.log(checked_moves(24))
 
-}
+//virker ikke helt, men næsten
 
 function all_moves(color) {
 
 }
 
+
+/*
+Store moves med
+
+
+*/
 
 function mouse_to_b(mouse_x, mouse_y) {
     return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
