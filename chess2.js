@@ -61,7 +61,6 @@ for (let i = 1; i < piece_names.length; i++) {
     images[i].src = "./" + piece_names[i] + ".png"
 }
 
-console.log(piece_names[-1])
 
 b = []
 f = []
@@ -100,12 +99,11 @@ v = [0, "P", "N", "B", "R", "Q", "K", "k", "q", "r", "b", "n", "p"]
 
 
 
-code = "rnbqkbnr/pppppppp/8/8/1qQ5/8/PPP2PPP/RNBQKBNR"
+code = "rnbqkbnr/pppppppp/8/2b1r3/8/8/PPP2PPP/RNBQK2R"
 
 
 
 function FEN_generate(code) {
-    let t0 = Date.now()
     clear_board()
     let x = 1
     let y = 9
@@ -133,14 +131,11 @@ function FEN_generate(code) {
 
         
     }
-    let t1 = Date.now()
-    console.log(t1 - t0)
 }
 
 FEN_generate(code)
 
-console.log(b)
-console.log(f)
+
 
 function update() {
 
@@ -198,7 +193,7 @@ function NK_moves(tile, moves, color) {
     let unchecked_moves = []
     moves.forEach(dir => {
         let move = tile + dir
-        if(b[move] == 0 || Math.sign(b[move]) != color) {
+        if(b[move] != 7 && (b[move] == 0 || Math.sign(b[move]) != color)) {
             unchecked_moves.push(move)
         }
     })
@@ -209,8 +204,8 @@ function NK_moves(tile, moves, color) {
 function P_moves(tile, color) {
     let unchecked_moves = []
     for (let i = -1; i < 2; i += 1) {
-        if(b[tile+10+i] && Math.sign(b[tile+10+i]) != color) {
-            unchecked_moves.push(tile+10+i)
+        if(b[tile+(10+i)*color] && Math.sign(b[tile+(10+i)*color]) != color) {
+            unchecked_moves.push(tile+(10+i)*color)
         }
     }
     if(!b[tile+(10*color)]) {
@@ -220,7 +215,6 @@ function P_moves(tile, color) {
             
         }
     }
-    console.log(unchecked_moves)
     return unchecked_moves
 }
 
@@ -274,47 +268,81 @@ function pseudo_moves(tile) {
     return move_properties[type](tile, color)
 }
 
-console.log(pseudo_moves(23))
 //hvad med castling? hvordan virker det med checked moves?
+
+function all_moves(color) {
+    let total_moves = []
+    for (let i = 0; i < 120; i++) {
+        let piece = b[i]
+        if (piece != 0 && piece != 7 && Math.sign(piece) == color) {
+            total_moves = total_moves.concat(pseudo_moves(i))
+        }
+    }
+    return total_moves
+}
+
+
+function tile_is_hit(tile, color) {
+    for (let i = 0; i < 120; i++) {
+        let piece = b[i]
+        if (piece != 0 && piece != 7 && Math.sign(piece) == color) {
+            if(pseudo_moves(i).includes(tile)) {
+                return 1
+            }
+        }
+        
+    }
+    return 0
+}
+
+
 
 function checked_moves(tile) {
     let t0 = Date.now()
     let moves = pseudo_moves(tile)
     let color = Math.sign(b[tile])
-    let legal_moves = moves
-    console.log(legal_moves)
+    let illegal_moves = []
     let value = b[tile]
-    let index_change = 0
+
     moves.forEach(move => {
         let temp = b[move]
-        let move_deleted = false
         b[move] = value
         b[tile] = 0
         
-        for (let i = 0; i < 120; i++) {
-            let piece = b[i]
-            if (piece != 0 && piece != 7 && Math.sign(b[piece]) != color) {
-                if (pseudo_moves(i).indexOf(b.indexOf(6*color)) != -1) {
-                    legal_moves.splice(legal_moves.indexOf(move))
-                }
-            }
+        if (tile_is_hit(b.indexOf(6*color), color*-1)) {
+            illegal_moves.push(move)
+                    b[move] = temp
+                    b[tile] = value
+                    return
         }
+        
         b[move] = temp
         b[tile] = value
         //first move er ligegyldigt (?)
     })
+    
+    if(b.indexOf(6*color) == tile && f[tile] && !tile_is_hit(tile, color*-1)) {
+        if (f[tile+3] && !b[tile+1] && !b[tile+2]) {
+            if (!tile_is_hit(tile+1, color*-1) && !tile_is_hit(tile+2, color*-1)) {
+                moves.push(tile+2)
+            }
+            
+        }
+        if (f[tile-4] && !b[tile-1] && !b[tile-2]) {
+            if (!tile_is_hit(tile-1, color*-1) && !tile_is_hit(tile-2, color*-1)) {
+                moves.push(tile-2)
+            }
+        }
+        
+
+    } 
     let t1 = Date.now()
     console.log(t1-t0)
-    return legal_moves
+    return moves.filter(move => !illegal_moves.includes(move))
 }
-
 console.log(checked_moves(24))
 
-//virker ikke helt, men næsten
 
-function all_moves(color) {
-
-}
 
 
 /*
