@@ -80,7 +80,6 @@ function clear_board() {
 clear_board()
 
 v = {
-    Hello: "You!",
     P: 1,
     N: 2,
     B: 3,
@@ -95,11 +94,10 @@ v = {
     p: -1
 }
 
-v = [0, "P", "N", "B", "R", "Q", "K", "k", "q", "r", "b", "n", "p"]
 
 
 
-code = "rnbqkbnr/pppppppp/8/2b1r3/8/8/PPP2PPP/RNBQK2R"
+code = "8/pppppppp/NNNNNNNN/nnnnnnnn/nnnnnnnn/NNNNNNNN/1PP2PPP/8"
 
 
 
@@ -115,10 +113,10 @@ function FEN_generate(code) {
         }
         else if (isNaN(code.charAt(i))) {
             if(code.charAt(i).toUpperCase() == code.charAt(i)) {
-                b[y*10+x] = v.indexOf(code.charAt(i))
+                b[y*10+x] = v[code.charAt(i)]
             }
             else {
-                b[y*10+x] = v.indexOf(code.charAt(i)) - v.length
+                b[y*10+x] = v[code.charAt(i)]
             }
             f[y*10+x] = 1
             x += 1
@@ -204,7 +202,7 @@ function NK_moves(tile, moves, color) {
 function P_moves(tile, color) {
     let unchecked_moves = []
     for (let i = -1; i < 2; i += 1) {
-        if(b[tile+(10+i)*color] && Math.sign(b[tile+(10+i)*color]) != color) {
+        if(b[tile+(10+i)*color] && Math.sign(b[tile+(10+i)*color]) != color && b[tile+(10+i)*color] != 7) {
             unchecked_moves.push(tile+(10+i)*color)
         }
     }
@@ -255,10 +253,9 @@ move_properties = {
     6: function(tile, color) {return NK_moves(tile, [9, 10, 11, -1, 1, -9, -10, -11], color)},
 }
 
-function move(tile, destination) {
-    if (checked_moves(tile).indexOf(destination) != -1) {
-        
-    }
+function move(tile, move) {
+    if (checked_moves(tile).includes(move)) {}
+  
 }
 
 
@@ -270,7 +267,7 @@ function pseudo_moves(tile) {
 
 //hvad med castling? hvordan virker det med checked moves?
 
-function all_moves(color) {
+function all_pseudo_moves(color) {
     let total_moves = []
     for (let i = 0; i < 120; i++) {
         let piece = b[i]
@@ -309,8 +306,10 @@ function checked_moves(tile) {
         b[move] = value
         b[tile] = 0
         
-        if (tile_is_hit(b.indexOf(6*color), color*-1)) {
-            illegal_moves.push(move)
+        if (tile_is_hit(b.includes(6*color), color*-1)) {
+            
+                illegal_moves.push(move)
+            
                     b[move] = temp
                     b[tile] = value
                     return
@@ -321,7 +320,7 @@ function checked_moves(tile) {
         //first move er ligegyldigt (?)
     })
     
-    if(b.indexOf(6*color) == tile && f[tile] && !tile_is_hit(tile, color*-1)) {
+    if(b.includes(6*color) == tile && f[tile] && !tile_is_hit(tile, color*-1)) {
         if (f[tile+3] && !b[tile+1] && !b[tile+2]) {
             if (!tile_is_hit(tile+1, color*-1) && !tile_is_hit(tile+2, color*-1)) {
                 moves.push(tile+2)
@@ -337,10 +336,44 @@ function checked_moves(tile) {
 
     } 
     let t1 = Date.now()
-    console.log(t1-t0)
-    return moves.filter(move => !illegal_moves.includes(move))
+    moves.filter(move => !illegal_moves.includes(move))
+    let true_moves = []
+    moves.forEach(move => {
+        if (Math.sign(b[tile]) == 1 && b[tile] == 4.5+3.5*color) {
+            true_moves.push([tile, move, f[tile], b[move]])
+                
+        }
+        else if (Math.sign(b[tile]) == 6) {
+            if (b[tile] == b[move+2]) {
+                true_moves.push([tile, move, f[tile], b[move], 1])
+                
+            }
+            else if (b[tile] == b[move-2]) {
+                true_moves.push([tile, move, f[tile], b[move], 0])
+
+            }
+        }
+        else {
+            true_moves.push([tile, move, f[tile], b[move]])
+        }
+    
+
+
+    })
+    return true_moves
 }
-console.log(checked_moves(24))
+let t0 = Date.now()
+
+for (let i = 0; i < 120; i++) {
+    if(b[i] != 7 && b[i] != 0) {
+        checked_moves(i)
+
+    }  
+}
+let t1 = Date.now()
+
+console.log(t1-t0)
+
 
 
 
