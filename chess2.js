@@ -97,7 +97,7 @@ v = {
 
 
 
-code = "8/pppppppp/NNNNNNNN/nnnnnnnn/nnnnnnnn/NNNNNNNN/1PP2PPP/8"
+code = "rnbqkbnr/pppppppp/8/8/8/8/PPP2PPP/R3K2R"
 
 
 
@@ -254,10 +254,66 @@ move_properties = {
 }
 
 function move(tile, move) {
-    if (checked_moves(tile).includes(move)) {}
-  
+    let t0 = Date.now()
+    let mover = checked_moves(tile)
+    console.log(mover)
+    let type_of_move
+    for (let i = 0; i < mover.length; i++) {
+        if (mover[i][0] == move) {
+            type_of_move = mover[i][1]
+            console.log(type_of_move)
+            break
+        }
+        else if (i == mover.length - 1) {
+            return console.log("Illegal move")
+        }
+    }
+    lm = [tile, move, b[tile],b[move], f[tile], type_of_move]
+    mm.push(lm)
+
+    //normal move
+    if(!type_of_move) {
+        b[move] = b[tile]
+        b[tile] = 0
+        f[tile] = 0
+        f[move] = 0
+    }
+    //Right castle
+    else if (type_of_move == 1) {
+        b[tile+1] = b[tile+3]
+        b[tile+3] = 0
+        f[tile+1] = 0
+        f[tile+3] = 0
+        b[move] = b[tile]
+        b[tile] = 0
+        f[tile] = 0
+        f[move] = 0
+
+        
+
+    }
+    //Left castle
+    else if (type_of_move == -1) {
+        b[tile-1] = b[tile-4]
+        b[tile-4] = 0
+        f[tile-1] = 0
+        f[tile-4] = 0
+        b[move] = b[tile]
+        b[tile] = 0
+        f[tile] = 0
+        f[move] = 0
+    }
+    else { //Promotion
+        b[move] = b[type_of_move]
+        b[tile] = 0
+        f[tile] = 0
+        f[move] = 0
+    }
+    let t1 = Date.now()
+    console.log(t1-t0)
 }
 
+move(25,26)
 
 function pseudo_moves(tile) {
     let type = Math.abs(b[tile])
@@ -320,46 +376,42 @@ function checked_moves(tile) {
         //first move er ligegyldigt (?)
     })
     
-    if(b.includes(6*color) == tile && f[tile] && !tile_is_hit(tile, color*-1)) {
-        if (f[tile+3] && !b[tile+1] && !b[tile+2]) {
-            if (!tile_is_hit(tile+1, color*-1) && !tile_is_hit(tile+2, color*-1)) {
-                moves.push(tile+2)
-            }
-            
-        }
-        if (f[tile-4] && !b[tile-1] && !b[tile-2]) {
-            if (!tile_is_hit(tile-1, color*-1) && !tile_is_hit(tile-2, color*-1)) {
-                moves.push(tile-2)
-            }
-        }
-        
-
-    } 
+    
     let t1 = Date.now()
     moves.filter(move => !illegal_moves.includes(move))
     let true_moves = []
     moves.forEach(move => {
-        if (Math.sign(b[tile]) == 1 && b[tile] == 4.5+3.5*color) {
-            true_moves.push([tile, move, f[tile], b[move]])
+        if (Math.sign(b[tile]) == 1 && b[move] == 4.5+3.5*color) {
+            for (let i = 2; i <= 5; i++) {
+                true_moves.push([move, i*color])
+            }
                 
         }
-        else if (Math.sign(b[tile]) == 6) {
-            if (b[tile] == b[move+2]) {
-                true_moves.push([tile, move, f[tile], b[move], 1])
-                
-            }
-            else if (b[tile] == b[move-2]) {
-                true_moves.push([tile, move, f[tile], b[move], 0])
-
-            }
-        }
+    
+        
         else {
-            true_moves.push([tile, move, f[tile], b[move]])
+            true_moves.push([move, 0])
         }
     
 
 
     })
+
+    if(b.indexOf(6*color) == tile && f[tile] && !tile_is_hit(tile, color*-1)) {
+        if (f[tile+3] && !b[tile+1] && !b[tile+2]) {
+            if (!tile_is_hit(tile+1, color*-1) && !tile_is_hit(tile+2, color*-1)) {
+                true_moves.push([tile+2, 1])
+            }
+            
+        }
+        if (f[tile-4] && !b[tile-1] && !b[tile-2]) {
+            if (!tile_is_hit(tile-1, color*-1) && !tile_is_hit(tile-2, color*-1)) {
+                true_moves.push([tile-2, -1])
+            }
+        }
+        
+
+    } 
     return true_moves
 }
 let t0 = Date.now()
