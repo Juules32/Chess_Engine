@@ -169,7 +169,7 @@ window.onload = function() {update()}
 
 //Array med possible moves for hver brik sorteret efter værdi
 
-function bishop_moves(tile) {
+function bishop_moves(t) {
     return 25
 }
 
@@ -177,20 +177,20 @@ function bishop_moves(tile) {
 move_properties = ["Nul!",
 [9,10,11,20],
 [19,21,8,12,-8,-12,-19,-21],
-[tile => {
-    tile
+[t => {
+    t
 }],
 [bishop_moves],
-[tile => {
-    tile
+[t => {
+    t
 }],
 
 ]
 
-function NK_moves(tile, moves, color) {
+function NK_moves(t, moves, color) {
     let unchecked_moves = []
     moves.forEach(dir => {
-        let move = tile + dir
+        let move = t + dir
         if(b[move] != 7 && (b[move] == 0 || Math.sign(b[move]) != color)) {
             unchecked_moves.push(move)
         }
@@ -199,42 +199,42 @@ function NK_moves(tile, moves, color) {
     return unchecked_moves
 }
 
-function P_moves(tile, color) {
+function P_moves(t, color) {
     let unchecked_moves = []
     for (let i = -1; i < 2; i += 1) {
-        if(b[tile+(10+i)*color] && Math.sign(b[tile+(10+i)*color]) != color && b[tile+(10+i)*color] != 7) {
-            unchecked_moves.push(tile+(10+i)*color)
+        if(b[t+(10+i)*color] && Math.sign(b[t+(10+i)*color]) != color && b[t+(10+i)*color] != 7) {
+            unchecked_moves.push(t+(10+i)*color)
         }
     }
-    if(!b[tile+(10*color)]) {
-        unchecked_moves.push(tile+(10*color))
-        if (f[tile] && !b[tile+(20*color)]) {
-            unchecked_moves.push(tile+(20*color))
+    if(!b[t+(10*color)]) {
+        unchecked_moves.push(t+(10*color))
+        if (f[t] && !b[t+(20*color)]) {
+            unchecked_moves.push(t+(20*color))
             
         }
     }
     return unchecked_moves
 }
 
-function BRQ_moves(tile, directions, color) {
+function BRQ_moves(t, directions, color) {
     let unchecked_moves = []
     directions.forEach(dir => {
         let i = 0
         while (true) {
             i += 1
 
-            let dir_tile = tile + i*dir
+            let dir_t = t + i*dir
 
             
-            if(b[dir_tile] == 0) {
-                unchecked_moves.push(dir_tile)
+            if(b[dir_t] == 0) {
+                unchecked_moves.push(dir_t)
                 continue
             } 
 
-            else if (b[dir_tile] == 7 || Math.sign(b[dir_tile]) == color) break
+            else if (b[dir_t] == 7 || Math.sign(b[dir_t]) == color) break
 
-            else if (Math.sign(b[dir_tile]) != color) {
-                unchecked_moves.push(dir_tile)
+            else if (Math.sign(b[dir_t]) != color) {
+                unchecked_moves.push(dir_t)
                 break
             }
         }
@@ -245,48 +245,51 @@ function BRQ_moves(tile, directions, color) {
 
 
 move_properties = {
-    1: function(tile, color) {return P_moves(tile, color)},
-    2: function(tile, color) {return NK_moves(tile, [19, 21, 8, 12, -8, -12, -19, -21], color)},
-    3: function(tile, color) {return BRQ_moves(tile, [9, 11, -9, -11], color)},
-    4: function(tile, color) {return BRQ_moves(tile, [10, -1, 1, -10], color)},
-    5: function(tile, color) {return BRQ_moves(tile, [9, 11, -9, -11, 10, -1, 1, -10], color)},
-    6: function(tile, color) {return NK_moves(tile, [9, 10, 11, -1, 1, -9, -10, -11], color)},
+    1: function(t, color) {return P_moves(t, color)},
+    2: function(t, color) {return NK_moves(t, [19, 21, 8, 12, -8, -12, -19, -21], color)},
+    3: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11], color)},
+    4: function(t, color) {return BRQ_moves(t, [10, -1, 1, -10], color)},
+    5: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11, 10, -1, 1, -10], color)},
+    6: function(t, color) {return NK_moves(t, [9, 10, 11, -1, 1, -9, -10, -11], color)},
 }
 
-function move(tile, move) {
+
+function move(t, move) {
     let t0 = Date.now()
-    let mover = checked_moves(tile)
-    console.log(mover)
+    let mover = checked_moves(t)
     let type_of_move
-    for (let i = 0; i < mover.length; i++) {
+    if (!mover[0]) {
+        return console.log("Illegal move")
+    }
+    for (let i = 0; i < mover.length + 1; i++) {
         if (mover[i][0] == move) {
             type_of_move = mover[i][1]
-            console.log(type_of_move)
             break
         }
         else if (i == mover.length - 1) {
             return console.log("Illegal move")
         }
     }
-    lm = [tile, move, b[tile],b[move], f[tile], type_of_move]
+    lm = [t, move, b[t],b[move], f[t], type_of_move]
     mm.push(lm)
+    console.log(lm)
 
     //normal move
     if(!type_of_move) {
-        b[move] = b[tile]
-        b[tile] = 0
-        f[tile] = 0
+        b[move] = b[t]
+        b[t] = 0
+        f[t] = 0
         f[move] = 0
     }
     //Right castle
     else if (type_of_move == 1) {
-        b[tile+1] = b[tile+3]
-        b[tile+3] = 0
-        f[tile+1] = 0
-        f[tile+3] = 0
-        b[move] = b[tile]
-        b[tile] = 0
-        f[tile] = 0
+        b[t+1] = b[t+3]
+        b[t+3] = 0
+        f[t+1] = 0
+        f[t+3] = 0
+        b[move] = b[t]
+        b[t] = 0
+        f[t] = 0
         f[move] = 0
 
         
@@ -294,31 +297,30 @@ function move(tile, move) {
     }
     //Left castle
     else if (type_of_move == -1) {
-        b[tile-1] = b[tile-4]
-        b[tile-4] = 0
-        f[tile-1] = 0
-        f[tile-4] = 0
-        b[move] = b[tile]
-        b[tile] = 0
-        f[tile] = 0
+        b[t-1] = b[t-4]
+        b[t-4] = 0
+        f[t-1] = 0
+        f[t-4] = 0
+        b[move] = b[t]
+        b[t] = 0
+        f[t] = 0
         f[move] = 0
     }
     else { //Promotion
         b[move] = b[type_of_move]
-        b[tile] = 0
-        f[tile] = 0
+        b[t] = 0
+        f[t] = 0
         f[move] = 0
     }
     let t1 = Date.now()
     console.log(t1-t0)
 }
 
-move(25,26)
 
-function pseudo_moves(tile) {
-    let type = Math.abs(b[tile])
-    let color = Math.sign(b[tile])
-    return move_properties[type](tile, color)
+function pseudo_moves(t) {
+    let type = Math.abs(b[t])
+    let color = Math.sign(b[t])
+    return move_properties[type](t, color)
 }
 
 //hvad med castling? hvordan virker det med checked moves?
@@ -335,11 +337,11 @@ function all_pseudo_moves(color) {
 }
 
 
-function tile_is_hit(tile, color) {
+function t_is_hit(t, color) {
     for (let i = 0; i < 120; i++) {
         let piece = b[i]
         if (piece != 0 && piece != 7 && Math.sign(piece) == color) {
-            if(pseudo_moves(i).includes(tile)) {
+            if(pseudo_moves(i).includes(t)) {
                 return 1
             }
         }
@@ -350,38 +352,37 @@ function tile_is_hit(tile, color) {
 
 
 
-function checked_moves(tile) {
+function checked_moves(t) {
     let t0 = Date.now()
-    let moves = pseudo_moves(tile)
-    let color = Math.sign(b[tile])
+    let moves = pseudo_moves(t)
+    let color = Math.sign(b[t])
     let illegal_moves = []
-    let value = b[tile]
+    let value = b[t]
 
     moves.forEach(move => {
         let temp = b[move]
         b[move] = value
-        b[tile] = 0
+        b[t] = 0
         
-        if (tile_is_hit(b.includes(6*color), color*-1)) {
-            
+        if (t_is_hit(b.indexOf(6*color), color*-1)) {
                 illegal_moves.push(move)
             
                     b[move] = temp
-                    b[tile] = value
+                    b[t] = value
                     return
         }
         
         b[move] = temp
-        b[tile] = value
+        b[t] = value
         //first move er ligegyldigt (?)
     })
     
-    
     let t1 = Date.now()
-    moves.filter(move => !illegal_moves.includes(move))
+    moves = moves.filter(move => !illegal_moves.includes(move))
+
     let true_moves = []
     moves.forEach(move => {
-        if (Math.sign(b[tile]) == 1 && b[move] == 4.5+3.5*color) {
+        if (Math.sign(b[t]) == 1 && b[move] == 4.5+3.5*color) {
             for (let i = 2; i <= 5; i++) {
                 true_moves.push([move, i*color])
             }
@@ -397,16 +398,16 @@ function checked_moves(tile) {
 
     })
 
-    if(b.indexOf(6*color) == tile && f[tile] && !tile_is_hit(tile, color*-1)) {
-        if (f[tile+3] && !b[tile+1] && !b[tile+2]) {
-            if (!tile_is_hit(tile+1, color*-1) && !tile_is_hit(tile+2, color*-1)) {
-                true_moves.push([tile+2, 1])
+    if(b.indexOf(6*color) == t && f[t] && !t_is_hit(t, color*-1)) {
+        if (f[t+3] && !b[t+1] && !b[t+2]) {
+            if (!t_is_hit(t+1, color*-1) && !t_is_hit(t+2, color*-1)) {
+                true_moves.push([t+2, 1])
             }
             
         }
-        if (f[tile-4] && !b[tile-1] && !b[tile-2]) {
-            if (!tile_is_hit(tile-1, color*-1) && !tile_is_hit(tile-2, color*-1)) {
-                true_moves.push([tile-2, -1])
+        if (f[t-4] && !b[t-1] && !b[t-2]) {
+            if (!t_is_hit(t-1, color*-1) && !t_is_hit(t-2, color*-1)) {
+                true_moves.push([t-2, -1])
             }
         }
         
@@ -414,17 +415,7 @@ function checked_moves(tile) {
     } 
     return true_moves
 }
-let t0 = Date.now()
 
-for (let i = 0; i < 120; i++) {
-    if(b[i] != 7 && b[i] != 0) {
-        checked_moves(i)
-
-    }  
-}
-let t1 = Date.now()
-
-console.log(t1-t0)
 
 
 
@@ -440,31 +431,36 @@ function mouse_to_b(mouse_x, mouse_y) {
     return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
 }
 
+function b_to_x(t) {
+    return (t % 10)*ts
+}
+
+function b_to_y(t) {
+    return h-Math.floor(t/10)*ts
+}
 
 mouse_down = false
+xy = 2
 var p
 
 function mousemove (event) {
     
     mouse_x = Math.floor((event.x - canvas_boundary.left)/ts) 
     mouse_y = Math.floor((event.y - canvas_boundary.top)/ts)
-    let xy = mouse_to_b(event.x, event.y)
+    xy = mouse_to_b(event.x, event.y)
 
     update()
     ctx.font = "30px Arial";
     ctx.fillStyle = "blue"
-
     ctx.fillText(mouse_to_b(event.x, event.y), event.x, event.y);
-    if(mouse_down && b[down_xy] && b[down_xy] != 7) {
-        
-        /* Moves dots
-                for (let i = 0; i < active_piece_moves.length; i++) {
-                    ctx.fillStyle = "gray"
-                    ctx.beginPath();
-                    ctx.arc(active_piece_moves[i][0]*ts - ts/2, h - active_piece_moves[i][1]*ts + ts/2, ts/ 5, 0, 7);
-                    ctx.fill();
-                
-            }*/
+
+    if(mouse_down) {
+            for (let i = 0; i < checked_moves(down_xy).length; i++) {
+                ctx.fillStyle = "gray"
+                ctx.beginPath();
+                ctx.arc(b_to_x(checked_moves(down_xy)[i][0]) - ts/2, b_to_y(checked_moves(down_xy)[i][0]) + 3*ts/2, ts/ 5, 0, 7);
+                ctx.fill();
+            }
             if (down_x % 2 == 0) p = 1
             else p = 0
             if ((down_y + p) % 2 == 1) ctx.fillStyle = "white"
@@ -477,17 +473,27 @@ function mousemove (event) {
 }
 function mousedown (event) {
     
-    mouse_down = true
 
     down_x = mouse_x
     down_y = mouse_y
 
     down_xy = mouse_to_b(event.x,event.y)
 
-    
+    if(b[down_xy] && b[down_xy] != 7) {
+        mouse_down = true
+    }
 }
 function mouseup () {
+    if(mouse_down) {
+        
+            move(down_xy, xy)
+        
+    }
     mouse_down = false
 
 }
 
+move(83,73)
+move(94,61)
+console.log(pseudo_moves(25))
+console.log(checked_moves(25))
