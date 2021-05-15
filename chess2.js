@@ -22,6 +22,10 @@ Empty space queen side castle
 
 Swap side ?
 
+
+VIGTIGT
+ændr checked moves til bare at være start- og slutposition, hvorimod lm defineres efter der rykkes.
+
 */
 
 //Defining canvas
@@ -86,9 +90,15 @@ v = {
     n: -2,
     p: -1
 }
+code = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
-code = "rnbqkbnr/pPpppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+code = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R"
 
+code = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8"
+
+code = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1"
+
+code = "k7/P7/K7/PP/8/8/8/8"
 function FEN_generate(code) {
     clear_board()
     let x = 1
@@ -195,6 +205,9 @@ function update() {
     ctx.beginPath();
     ctx.rect(400,300,100,100);
     ctx.fill();
+    ctx.font = "25px Arial";
+
+    ctx.fillText(evaluate(), 420, 250)
 }
 
 //Updates board when window has loaded
@@ -263,7 +276,6 @@ move_properties = {
 
 
 function move(t, move, promotion = 0) {
-    let t0 = Date.now()
     let mover = checked_moves(t)
     let type_of_move
     if (!mover[0]) {
@@ -273,7 +285,6 @@ function move(t, move, promotion = 0) {
         if (mover[i][1] == move) {
             type_of_move = mover[i+promotion][5]
             mm.push(mover[i+promotion])
-            console.log(mover[i+promotion])
             break
         }
         else if (i == mover.length - 1) {
@@ -321,8 +332,6 @@ function move(t, move, promotion = 0) {
         f[t] = 0
         f[move] = 0
     }
-    let t1 = Date.now()
-    console.log(t1-t0)
 
     
 }
@@ -345,7 +354,6 @@ function all_pseudo_moves(color) {
     return total_moves
 }
 
-pseudo_moves(82)
 
 function t_is_hit(t, color) {
     for (let i = 0; i < 120; i++) {
@@ -392,7 +400,7 @@ function checked_moves(t) {
         if (Math.abs(b[t]) == 1 && (Math.floor(move/10)) == 5.5 + 3.5*color) {
             for (let i = 2; i <= 5; i++) {
 
-                true_moves.push([t, move, b[t], b[move], f[t], i*color])
+                true_moves.push([t, move, b[t], b[move], f[t], i*color, f[move]])
             }
                 
         }
@@ -401,7 +409,7 @@ function checked_moves(t) {
         
         
         else {
-            true_moves.push([t, move, b[t], b[move], f[t], 0])
+            true_moves.push([t, move, b[t], b[move], f[t], 0, f[move]])
         }
     
 
@@ -438,7 +446,7 @@ function checked_moves(t) {
             
         }
     }
-    if(b.indexOf(6*color) == t && f[t] && !t_is_hit(t, color*-1)) {
+    if(b.indexOf(6*color) == t && f[t] && !t_is_hit(t, color*-1) && b[t+10*color] != color*-1) {
         if (f[t+3] && !b[t+1] && !b[t+2]) {
             if (!t_is_hit(t+1, color*-1) && !t_is_hit(t+2, color*-1) && b[t+3+10*color] != color*-1) {
                     true_moves.push([t, t+2, b[t], b[t+2], f[t], 1])
@@ -625,12 +633,11 @@ function all_legal_moves(color) {
 
 function unmake_lm() {
     let lm = mm[mm.length-1] //last move
-    console.log(lm)
 
     b[lm[0]] = lm[2]
     b[lm[1]] = lm[3]
     f[lm[0]] = lm[4]
-    if(lm[3]) f[lm[1]] = 1
+    f[lm[1]] = lm[6]
 
     if(Math.abs(lm[5]) == 1) {
         b[Math.floor(lm[0]/10)*10+4.5+3.5*lm[5]] = b[lm[0]+lm[5]]
@@ -642,9 +649,7 @@ function unmake_lm() {
         b[lm[0]+Math.sign(lm[5])] = lm[2]*-1
     }
     mm.pop()
-    update()
 }
-
 
 function movegen(depth) {
     if (depth == 0) {
@@ -658,23 +663,110 @@ function movegen(depth) {
     else {
         legal_moves = all_legal_moves(Math.sign(mm[mm.length-1][2])*-1)
     }
-    console.log(legal_moves)
     let numPositions = 0
 
+    
 
-    numPositions += movegen(depth-1)
+    
+        legal_moves.forEach(m => {
 
+            if(Math.abs(m[5]) > 1 && Math.abs(m[5]) < 6) {
+                move(m[0],m[1],5-Math.abs(m[5]))
+            }
+            else move(m[0],m[1])
+            numPositions += movegen(depth-1)
+            unmake_lm()
 
-
-
-
-
+        })
+    
     return numPositions
 }
 
-move(82,93)
+let t0 = Date.now()
+console.log(movegen(10))
+t1 = Date.now()
+console.log(t1-t0)
 
-unmake_lm()
+update()
 
 
+function evaluate() {
+    let evaluation = 0
+    b.forEach(tile => {
+        if (tile != 7 && tile) {
+            let tile_abs = Math.abs(tile)
+            let color = Math.sign(tile)
+            if(tile_abs == 1) {
+                evaluation += tile
+            }
+            else if(tile_abs == 2 || tile_abs == 3) {
+                evaluation += 3*color
+            }
+            else if (tile_abs == 4) {
+                evaluation += 5*color
+            }
+            else {
+                evaluation += 9*color
+            }
+        }
+    })
+    return evaluation
+}
 
+console.log(evaluate())
+
+function minimax(depth, maximizing_player) {
+    if (depth == 0) {
+        return evaluate()
+    }
+
+    if(!all_legal_moves(maximizing_player).length) {
+        console.log("po")
+        if (t_is_hit(b.indexOf(6*maximizing_player), maximizing_player*-1)) { //ÆNDR
+            return -Infinity
+        }
+        console.log("po")
+        return 0
+    }
+
+    if (maximizing_player == 1) {
+        max_eval = -Infinity
+        all_legal_moves(maximizing_player).forEach(m => {
+            if(Math.abs(m[5]) > 1 && Math.abs(m[5]) < 6) {
+                
+                move(m[0],m[1],5-Math.abs(m[5]))
+            }
+            else move(m[0],m[1])
+            evaluation = minimax(depth -1, -1)
+            unmake_lm()
+
+            max_eval = Math.max(max_eval, evaluation)
+        })
+        return max_eval
+
+    }
+    else if (maximizing_player == -1) {
+        min_eval = Infinity
+        all_legal_moves(maximizing_player).forEach(m => {
+            if(Math.abs(m[5]) > 1 && Math.abs(m[5]) < 6) {
+                move(m[0],m[1],5-Math.abs(m[5]))
+            }
+            else move(m[0],m[1])
+            evaluation = minimax(depth -1, 1)
+            unmake_lm()
+            min_eval = Math.min(min_eval, evaluation)
+        })
+        return min_eval
+
+    }
+}
+move(62,72)
+console.log(minimax(3,1))
+
+if (false == -1) {
+    
+}
+
+console.log(all_legal_moves(-1))
+
+console.log()
