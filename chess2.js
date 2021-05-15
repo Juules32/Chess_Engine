@@ -18,21 +18,19 @@ all moves gør så man kan gå mere end ét træk tilbage
 
 
 
-
+Empty space queen side castle
 
 Swap side ?
 
-
-
-find alle moves 1 gang i starten og find fremtidige moves ud fra ændringerne af positionen efter hvert træk for ikke at gentage mange ens trækfremfindinger
-til engine at tænke frem er det nemt at trace moves tilbage fordi man bare kan gemme positionen
 */
 
+//Defining canvas
 c = document.getElementById("visuals")
 ctx = c.getContext("2d");
 c.width = 800
 c.height = 400
 
+//Event listeners
 c.onmousemove = mousemove
 c.onmousedown = mousedown
 document.onmouseup = mouseup
@@ -47,23 +45,19 @@ const w = c.width
 const h = c.height
 const ts = h/8 // tile size
 
-//[start, slut, firstmove (1 or 0), capture/move/castle/promotion, captured piece/side of castling/promotion piece]
 
-lm = []
-mm = []
+mm = [] //Match Moves
 
-
-piece_names = ["Pee", "wp", "wn", "wb", "wr", "wq", "wk", "bk", "bq", "br", "bb", "bn", "bp"] //sorteres efter piece number value
+//Piece names sorteres efter værdi
+piece_names = [null, "wp", "wn", "wb", "wr", "wq", "wk", "bk", "bq", "br", "bb", "bn", "bp"]
 var images = []
-i = 0
 for (let i = 1; i < piece_names.length; i++) {
     images[i] = new Image()
     images[i].src = "./" + piece_names[i] + ".png"
 }
 
-
-b = []
-f = []
+b = [] //Board
+f = [] //First move
 
 function clear_board() {
     for (let i = 0; i < 120; i++) {
@@ -77,7 +71,6 @@ function clear_board() {
         }
     }
 }
-clear_board()
 
 v = {
     P: 1,
@@ -94,12 +87,7 @@ v = {
     p: -1
 }
 
-
-
-
-code = "rnbqkbnr/pppppppp/3P4/8/8/8/PPP2PPP/R3K2R"
-
-
+code = "rnbqkbnr/pPpppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
 function FEN_generate(code) {
     clear_board()
@@ -118,7 +106,12 @@ function FEN_generate(code) {
             else {
                 b[y*10+x] = v[code.charAt(i)]
             }
-            f[y*10+x] = 1
+            if(Math.sign(b[y*10+x]) == 1 && y*10+x >= 21 && y*10+x <= 38) {
+                f[y*10+x] = 1
+            }
+            else if (Math.sign(b[y*10+x]) == -1 && y*10+x >= 81 && y*10+x <= 98) {
+                f[y*10+x] = 1
+            }
             x += 1
         }
         else {
@@ -133,11 +126,8 @@ function FEN_generate(code) {
 
 FEN_generate(code)
 
-
-
 function update() {
-    
-    
+    //Draws Chess tiles
     for (let file = 0; file < 8; file++) {
         for (let rank = 0; rank < 8; rank++) {
             if((file+rank) % 2 != 0) {
@@ -148,9 +138,9 @@ function update() {
             ctx.rect(rank*ts, file*ts, ts, ts);
             ctx.fill();
         }
-        
     }
 
+    //Draws Pieces
     for (let i = 0; i < 120; i++) {
         if (b[i] != 7 && b[i] != 0) {
             let x = i % 10
@@ -165,142 +155,8 @@ function update() {
             }
         }
     }
-    
-}
 
-window.onload = function() {update()}
-
-
-
-function NK_moves(t, moves, color) {
-    let unchecked_moves = []
-    moves.forEach(dir => {
-        let move = t + dir
-        if(b[move] != 7 && (b[move] == 0 || Math.sign(b[move]) != color)) {
-            unchecked_moves.push(move)
-        }
-    })
-    
-    return unchecked_moves
-}
-
-function P_moves(t, color) {
-    let unchecked_moves = []
-    for (let i = -1; i < 2; i += 2) {
-        if(b[t+(10+i)*color] && Math.sign(b[t+(10+i)*color]) != color && b[t+(10+i)*color] != 7) {
-            unchecked_moves.push(t+(10+i)*color)
-        }
-    }
-    
-    if(!b[t+(10*color)]) {
-        unchecked_moves.push(t+(10*color))
-        if (f[t] && !b[t+(20*color)]) {
-            unchecked_moves.push(t+(20*color))
-        }
-    }
-    
-    return unchecked_moves
-}
-
-function BRQ_moves(t, directions, color) {
-    let unchecked_moves = []
-    directions.forEach(dir => {
-        let i = 0
-        while (true) {
-            i += 1
-
-            let dir_t = t + i*dir
-
-            
-            if(b[dir_t] == 0) {
-                unchecked_moves.push(dir_t)
-                continue
-            } 
-
-            else if (b[dir_t] == 7 || Math.sign(b[dir_t]) == color) break
-
-            else if (Math.sign(b[dir_t]) != color) {
-                unchecked_moves.push(dir_t)
-                break
-            }
-        }
-    })
-
-    return unchecked_moves
-}
-
-
-move_properties = {
-    1: function(t, color) {return P_moves(t, color)},
-    2: function(t, color) {return NK_moves(t, [19, 21, 8, 12, -8, -12, -19, -21], color)},
-    3: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11], color)},
-    4: function(t, color) {return BRQ_moves(t, [10, -1, 1, -10], color)},
-    5: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11, 10, -1, 1, -10], color)},
-    6: function(t, color) {return NK_moves(t, [9, 10, 11, -1, 1, -9, -10, -11], color)},
-}
-
-
-function move(t, move) {
-    let t0 = Date.now()
-    let mover = checked_moves(t)
-    let type_of_move
-    if (!mover[0]) {
-        return console.log("Illegal move")
-    }
-    for (let i = 0; i < mover.length + 1; i++) {
-        if (mover[i][1] == move) {
-            lm = mover[i]
-            type_of_move = lm[5]
-            break
-        }
-        else if (i == mover.length - 1) {
-            return console.log("Illegal move")
-        }
-    }
-    mm.push(lm)
-    console.log(lm)
-
-    //normal move
-    if(!type_of_move) {
-        b[move] = b[t]
-        b[t] = 0
-        f[t] = 0
-        f[move] = 0
-    }
-    //Right castle
-    else if (type_of_move == 1) {
-        b[t+1] = b[t+3]
-        b[t+3] = 0
-        f[t+1] = 0
-        f[t+3] = 0
-        b[move] = b[t]
-        b[t] = 0
-        f[t] = 0
-        f[move] = 0
-
-        
-
-    }
-    //Left castle
-    else if (type_of_move == -1) {
-        b[t-1] = b[t-4]
-        b[t-4] = 0
-        f[t-1] = 0
-        f[t-4] = 0
-        b[move] = b[t]
-        b[t] = 0
-        f[t] = 0
-        f[move] = 0
-    }
-    else { //Promotion
-        b[move] = b[type_of_move]
-        b[t] = 0
-        f[t] = 0
-        f[move] = 0
-    }
-    let t1 = Date.now()
-    console.log(t1-t0)
-
+    //Draws test stuff
     ctx.fillStyle = "white"
     ctx.beginPath();
     ctx.rect(ts*8, 0,  w, h);
@@ -332,10 +188,143 @@ function move(t, move) {
             
         }
         ctx.beginPath();
-            ctx.rect(400+x*0.2,150+y*0.2,10,10);
-            ctx.fill();
+        ctx.rect(400+x*0.2,150+y*0.2,10,10);
+        ctx.fill();
         
     }
+    ctx.beginPath();
+    ctx.rect(400,300,100,100);
+    ctx.fill();
+}
+
+//Updates board when window has loaded
+window.onload = function() {update()}
+
+//Knight and King moves
+function NK_moves(t, moves, color) {
+    let unchecked_moves = []
+    moves.forEach(dir => {
+        let move = t + dir
+        if(b[move] != 7 && (b[move] == 0 || Math.sign(b[move]) != color)) {
+            unchecked_moves.push(move)
+        }
+    })
+    return unchecked_moves
+}
+
+//Pawn moves
+function P_moves(t, color) {
+    let unchecked_moves = []
+    for (let i = -1; i < 2; i += 2) {
+        if(b[t+(10+i)*color] && Math.sign(b[t+(10+i)*color]) != color && b[t+(10+i)*color] != 7) {
+            unchecked_moves.push(t+(10+i)*color)
+        }
+    }
+    if(!b[t+(10*color)]) {
+        unchecked_moves.push(t+(10*color))
+        if (f[t] && !b[t+(20*color)]) {
+            unchecked_moves.push(t+(20*color))
+        }
+    }
+    
+    return unchecked_moves
+}
+
+//Bishop, Rook and Queen moves
+function BRQ_moves(t, directions, color) {
+    let unchecked_moves = []
+    directions.forEach(dir => {
+        let i = 0
+        while (true) {
+            i += 1
+            let dir_t = t + i*dir
+            if(b[dir_t] == 0) {
+                unchecked_moves.push(dir_t)
+                continue
+            } 
+            else if (b[dir_t] == 7 || Math.sign(b[dir_t]) == color) break
+            else if (Math.sign(b[dir_t]) != color) {
+                unchecked_moves.push(dir_t)
+                break
+            }
+        }
+    })
+    return unchecked_moves
+}
+
+move_properties = {
+    1: function(t, color) {return P_moves(t, color)},
+    2: function(t, color) {return NK_moves(t, [19, 21, 8, 12, -8, -12, -19, -21], color)},
+    3: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11], color)},
+    4: function(t, color) {return BRQ_moves(t, [10, -1, 1, -10], color)},
+    5: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11, 10, -1, 1, -10], color)},
+    6: function(t, color) {return NK_moves(t, [9, 10, 11, -1, 1, -9, -10, -11], color)},
+}
+
+
+function move(t, move, promotion = 0) {
+    let t0 = Date.now()
+    let mover = checked_moves(t)
+    let type_of_move
+    if (!mover[0]) {
+        return console.log("Illegal move")
+    }
+    for (let i = 0; i < mover.length + 1; i++) {
+        if (mover[i][1] == move) {
+            type_of_move = mover[i+promotion][5]
+            mm.push(mover[i+promotion])
+            console.log(mover[i+promotion])
+            break
+        }
+        else if (i == mover.length - 1) {
+            return console.log("Illegal move")
+        }
+    }
+    //normal move
+    if(!type_of_move) {
+        b[move] = b[t]
+        b[t] = 0
+        f[t] = 0
+        f[move] = 0
+    }
+    //Right castle
+    else if (type_of_move == 1) {
+        b[t+1] = b[t+3]
+        b[t+3] = 0
+        f[t+1] = 0
+        f[t+3] = 0
+        b[move] = b[t]
+        b[t] = 0
+        f[move] = 0
+        f[t] = 0
+    }
+    //Left castle
+    else if (type_of_move == -1) {
+        b[t-1] = b[t-4]
+        b[t-4] = 0
+        f[t-1] = 0
+        f[t-4] = 0
+        b[move] = b[t]
+        b[t] = 0
+        f[move] = 0
+        f[t] = 0
+    }
+    else if(Math.abs(type_of_move) == 6) {
+        b[move] = b[t]
+        b[t] = 0
+        b[t+Math.sign(type_of_move)] = 0
+    }
+    //Promotion
+    else { 
+        b[move] = type_of_move
+        b[t] = 0
+        f[t] = 0
+        f[move] = 0
+    }
+    let t1 = Date.now()
+    console.log(t1-t0)
+
+    
 }
 
 
@@ -356,6 +345,7 @@ function all_pseudo_moves(color) {
     return total_moves
 }
 
+pseudo_moves(82)
 
 function t_is_hit(t, color) {
     for (let i = 0; i < 120; i++) {
@@ -369,7 +359,6 @@ function t_is_hit(t, color) {
     }
     return 0
 }
-
 
 
 function checked_moves(t) {
@@ -400,7 +389,7 @@ function checked_moves(t) {
 
     let true_moves = []
     moves.forEach(move => {
-        if (Math.sign(b[t]) == 1 && b[move] == 4.5+3.5*color) {
+        if (Math.abs(b[t]) == 1 && (Math.floor(move/10)) == 5.5 + 3.5*color) {
             for (let i = 2; i <= 5; i++) {
 
                 true_moves.push([t, move, b[t], b[move], f[t], i*color])
@@ -418,17 +407,47 @@ function checked_moves(t) {
 
 
     })
-
-    if(b.indexOf(6*color) == t && f[t] && !t_is_hit(t, color*-1)) {
-        if (f[t+3] && !b[t+1] && !b[t+2]) {
-            if (!t_is_hit(t+1, color*-1) && !t_is_hit(t+2, color*-1)) {
-                true_moves.push([t, t+2, b[t], b[t+2], f[t], 1])
+    if (Math.abs(value) == 1) {
+        if (mm.length) {
+            if (Math.floor(mm[mm.length - 1][1]/10) == Math.floor(t/10) && mm[mm.length - 1][0] == mm[mm.length - 1][1] + 20*color && mm[mm.length - 1][2] == color*-1) {
+                if((mm[mm.length - 1][0] % 10) - 1 == t % 10) {
+                    b[t+10*color+1] = b[t]
+                    b[t] = 0
+                    b[t+1] = 0
+                    if(!t_is_hit(b.indexOf(6*color), color*-1)) {
+                        true_moves.push([t, t+10*color+1, color, 0, f[t], +6])
+                    }
+                    b[t] = b[t+10*color+1]
+                    b[t+10*color+1] = 0
+                    b[t+1] = color*-1
+                }
+                else if((mm[mm.length - 1][0] % 10) + 1 == t % 10) {
+                    b[t+10*color-1] = b[t]
+                    b[t] = 0
+                    b[t-1] = 0
+                    if(!t_is_hit(b.indexOf(6*color), color*-1)) {
+                        true_moves.push([t, t+10*color-1, color, 0, f[t], -6])
+                    }
+                    b[t] = b[t+10*color-1]
+                    b[t+10*color-1] = 0
+                    b[t-1] = color*-1
+                }
+                
+                
             }
             
         }
-        if (f[t-4] && !b[t-1] && !b[t-2]) {
-            if (!t_is_hit(t-1, color*-1) && !t_is_hit(t-2, color*-1)) {
-                true_moves.push([t, t-2, b[t], b[t-2], f[t], -1])
+    }
+    if(b.indexOf(6*color) == t && f[t] && !t_is_hit(t, color*-1)) {
+        if (f[t+3] && !b[t+1] && !b[t+2]) {
+            if (!t_is_hit(t+1, color*-1) && !t_is_hit(t+2, color*-1) && b[t+3+10*color] != color*-1) {
+                    true_moves.push([t, t+2, b[t], b[t+2], f[t], 1])
+            }
+            
+        }
+        if (f[t-4] && !b[t-1] && !b[t-2] && !b[t-3]) {
+            if (!t_is_hit(t-1, color*-1) && !t_is_hit(t-2, color*-1) && b[t-3+10*color] != color*-1) {
+                    true_moves.push([t, t-2, b[t], b[t-2], f[t], -1]) 
             }
         }
         
@@ -442,11 +461,6 @@ function checked_moves(t) {
 
 
 
-/*
-Store moves med
-
-
-*/
 
 function mouse_to_b(mouse_x, mouse_y) {
     return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
@@ -510,15 +524,18 @@ function mousedown (event) {
         if(b[down_xy] && b[down_xy] != 7) {
             mouse_down = true
         }
+
+        if((mouse_x == 400 || mouse_x == 450) && mouse_y > 250) {
+            unmake_lm()
+        }
     }
     else {
         let color = Math.sign(b[down_xy])
         
-        console.log(down_xy, mouse_x + ", " + mouse_y, color, xy)
         if(mouse_x == promotion_x) {
             for (let i = 0; i < 4; i++) {
                 if (mouse_y == promotion_y + ts*color*i) {
-                    move(down_xy,xy)
+                    move(down_xy,xy, 5-i-2)
                     b[xy] = (5-i)*color
                     
                 }
@@ -526,7 +543,6 @@ function mousedown (event) {
             
 
             
-            console.log("pee")
         }
 
 
@@ -549,12 +565,12 @@ function mouseup () {
 
                     let x = xy % 10
                     let y = Math.floor(xy/10) - 1
-                    if (Math.abs(b[down_xy]) == 1 && y == 4.5+3.5*color) {
+                    let down_y = Math.floor(down_xy/10) - 1
+                    if (Math.abs(b[down_xy]) == 1 && y == 4.5+3.5*color && down_y == 4.5+2.5*color) {
                         will_update = false
                         promotion_y = mouse_y
                         promotion_x = mouse_x
                         
-                        console.log(promotion_x, promotion_y)
 
                         
                         if(color == 1) {
@@ -573,7 +589,6 @@ function mouseup () {
                             ctx.rect(mouse_x, mouse_y-ts*3, ts, ts*4)
                             ctx.fill();
                             for (let i = 2; i < 6; i++) {
-                                console.log(images.length-i-4)
                                 ctx.drawImage(images[images.length-i], mouse_x, (5-i*color)*ts-3*ts, ts, ts)
                                 
                             }
@@ -595,8 +610,6 @@ function mouseup () {
     }
 }
 
-move(33,43)
-move(92,73)
 
 function all_legal_moves(color) {
     let all_moves = []
@@ -607,27 +620,61 @@ function all_legal_moves(color) {
         }
         
     }
-       
-
-
-
-
-
-    
     return all_moves
 }
 
+function unmake_lm() {
+    let lm = mm[mm.length-1] //last move
+    console.log(lm)
 
-console.table(all_legal_moves(-1))
+    b[lm[0]] = lm[2]
+    b[lm[1]] = lm[3]
+    f[lm[0]] = lm[4]
+    if(lm[3]) f[lm[1]] = 1
 
-move(43,53)
-move(53,63)
-console.log(pseudo_moves(63))
+    if(Math.abs(lm[5]) == 1) {
+        b[Math.floor(lm[0]/10)*10+4.5+3.5*lm[5]] = b[lm[0]+lm[5]]
+        b[lm[0]+lm[5]] = 0
+        f[Math.floor(lm[0]/10)*10+4.5+3.5*lm[5]] = 1
+    }
+
+    else if(Math.abs(lm[5]) == 6) {
+        b[lm[0]+Math.sign(lm[5])] = lm[2]*-1
+    }
+    mm.pop()
+    update()
+}
 
 
-console.log(checked_moves(74))
+function movegen(depth) {
+    if (depth == 0) {
+        return 1
+    }
+
+    let legal_moves
+    if(!mm.length) {
+        legal_moves = all_legal_moves(1)
+    }
+    else {
+        legal_moves = all_legal_moves(Math.sign(mm[mm.length-1][2])*-1)
+    }
+    console.log(legal_moves)
+    let numPositions = 0
 
 
+    numPositions += movegen(depth-1)
+
+
+
+
+
+
+    return numPositions
+}
+
+move(82,93)
+
+unmake_lm()
 
 
 
