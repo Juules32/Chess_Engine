@@ -24,9 +24,7 @@ Swap side ?
 
 sorter moves i all_legal_moves efter vigtighed for hurtigere at finde de gode moves
 
-VIGTIGT
-ændr checked moves til bare at være start- og slutposition, hvorimod lm defineres efter der rykkes.
-
+lav funktion, der vælger trækket
 */
 
 //Defining canvas
@@ -742,7 +740,6 @@ function minimax(depth, alpha, beta, maximizing_player) {
     }
 
     if (maximizing_player == 1) {
-        max_eval = -Infinity
         for (let i = 0; i < all_legal_moves(maximizing_player).length; i++) {
             let m = all_legal_moves(maximizing_player)[i]
             
@@ -752,38 +749,67 @@ function minimax(depth, alpha, beta, maximizing_player) {
             evaluation = minimax(depth -1, alpha, beta, -1)
 
             unmake_lm()
-            max_eval = Math.max(max_eval, evaluation)
             alpha = Math.max(alpha, evaluation)
             if (beta <= alpha) {
                 break
             }
         }
-        return max_eval
+        return alpha
 
     }
     else if (maximizing_player == -1) {
-        min_eval = Infinity
         for (let i = 0; i < all_legal_moves(maximizing_player).length; i++) {
             let m = all_legal_moves(maximizing_player)[i]
             move(m)
 
             evaluation = minimax(depth -1, alpha, beta, 1)
             unmake_lm()
-            min_eval = Math.min(min_eval, evaluation)
             beta = Math.min(beta, evaluation)
             if(beta <= alpha) {
                 break
             }
         }
-        return min_eval
+        return beta
 
     }
 }
 
-/*t0 = Date.now()
-console.log(minimax(6,-Infinity, Infinity, 1))
+t0 = Date.now()
+console.log(minimax(4,-Infinity, Infinity, 1))
 t1 = Date.now()
-console.log(t1-t0)*/
+console.log(t1-t0)
+
+function best_move(depth, color) {
+    let moves = all_legal_moves(color)
+    let current_best_evaluation = Infinity*color*-1
+    
+    let best_moves = []
+    for (let i = 0; i < moves.length; i++) {
+        move(moves[i])
+        let test_evaluation = minimax(depth-1, -Infinity, Infinity, color*-1)
+        if(color == 1) {
+
+            if (test_evaluation >= current_best_evaluation) {
+                current_best_evaluation = test_evaluation
+                best_moves.push(i)
+                console.log(moves[i], current_best_evaluation)
+
+            }
+        }
+        else {
+
+            if (test_evaluation <= current_best_evaluation) {
+                current_best_evaluation = test_evaluation
+                best_moves.push(i)
+                console.log(moves[i], current_best_evaluation)
+
+            }
+        }
+        unmake_lm()        
+    }
+    return best_moves //Kan ændres tilbage til bare det bedste træk, men prøv evt. at kunne bruge best moves, når man leder efter først 1 depth, så 2 etc.
+    7adad // brug best_moves som parameter til iterativ?
+}
 
 
 function dev_tools() {
