@@ -1,9 +1,25 @@
 <html>
 
     <body>
+        
+        <input size="50px" id="FEN_input" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"></input>
+        <button onclick="FEN_generate(document.getElementById('FEN_input').value)">Generate from FEN</button>
+        </br>
+        <input size="5px" id="Edit_piece" value="0"></input>
+        <button onclick="get_edit()">Edit mode ON/OFF</button>
+        </br>
+        <input size="5px" id="gen_depth" value="4"></input>
+        <button onclick="console.log(movegen(document.getElementById('gen_depth').value))">Perform movegen</button>
+        </br>
+        <input size="5px" id="Depth"></input>
+        <input size="5px" id="Side"></input>
+        <button onclick="console.log(minimax(document.getElementById('Depth').value, -Infinity, Infinity, document.getElementById('Side').value))">Find computer move</button>
+        </br>
+        
+        <button onclick="get_dev()">Developer mode ON/OFF</button>
+        </br>
 
         <canvas id="visuals" style="border: 1px solid #000000"></canvas>
         <script src="chess2.js"></script>
-
     </body>
 </html>

@@ -22,6 +22,7 @@ Empty space queen side castle
 
 Swap side ?
 
+sorter moves i all_legal_moves efter vigtighed for hurtigere at finde de gode moves
 
 VIGTIGT
 ændr checked moves til bare at være start- og slutposition, hvorimod lm defineres efter der rykkes.
@@ -90,7 +91,6 @@ v = {
     n: -2,
     p: -1
 }
-code = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
 code = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R"
 
@@ -99,11 +99,31 @@ code = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8"
 code = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1"
 
 code = "k7/P7/K7/PP/8/8/8/8"
+code = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+
+dev_mode = true
+function get_dev() {
+    if (dev_mode) dev_mode = false
+    else dev_mode = true
+    update()
+}
+
+edit = false
+function get_edit() {
+    if (edit) edit = false
+    else edit = true
+}
+
 function FEN_generate(code) {
+    mm = []
+    console.log(code)
     clear_board()
     let x = 1
     let y = 9
     for (let i = 0; i < code.length; i++) {
+        if (code.charAt(i) == " ") {
+            break
+        }
         if (code.charAt(i) == "/") {
             y -= 1
             x = 1
@@ -116,12 +136,13 @@ function FEN_generate(code) {
             else {
                 b[y*10+x] = v[code.charAt(i)]
             }
-            if(Math.sign(b[y*10+x]) == 1 && y*10+x >= 21 && y*10+x <= 38) {
+            if(b[y*10+x] == 1 && y*10+x >= 31 && y*10+x <= 38) {
                 f[y*10+x] = 1
             }
-            else if (Math.sign(b[y*10+x]) == -1 && y*10+x >= 81 && y*10+x <= 98) {
+            else if (b[y*10+x] == -1 && y*10+x >= 81 && y*10+x <= 88) {
                 f[y*10+x] = 1
             }
+            
             x += 1
         }
         else {
@@ -132,9 +153,29 @@ function FEN_generate(code) {
 
         
     }
+
+    //Afgør, om konger har rykket
+    for (let i = -1; i < 2; i = i + 2) {
+        if (b[60-35*i] == 6*i) {
+            f[60-35*i] = 1
+        }
+    }
+
+    //Afgør, om tårne har rykket
+    for (let i = -1; i < 2; i = i + 2) {
+        if (b[56-35*i] == 4*i) {
+            f[56-35*i] = 1
+        }
+        if (b[63-35*i] == 4*i) {
+            f[63-35*i] = 1
+        }
+    }
+
+    //Opdaterer med det samme, så man kan se brikkerne
+    update()
 }
 
-FEN_generate(code)
+FEN_generate(document.getElementById("FEN_input").value)
 
 function update() {
     //Draws Chess tiles
@@ -166,48 +207,13 @@ function update() {
         }
     }
 
-    //Draws test stuff
     ctx.fillStyle = "white"
     ctx.beginPath();
     ctx.rect(ts*8, 0,  w, h);
     ctx.fill();
-    for (let i = 0; i < mm.length; i++) {
-        ctx.font = "15px Arial";
-        ctx.fillStyle = "blue"
-        ctx.fillText(mm[mm.length-1-i], 420, 50+i*15)
-    }
-    for (let i = 0; i < f.length; i++) {
-        let x = b_to_x(i)
-        let y = b_to_y(i)
-        
-        if(b[i] == 7) {
-            continue
-        }
-
-        if (!b[i]) {
-            ctx.fillStyle = "green"
-            
-        }
-        else {
-            ctx.fillStyle = "yellow"
-            
-        }
-        
-        if (f[i] == 1) {
-            ctx.fillStyle = "purple"
-            
-        }
-        ctx.beginPath();
-        ctx.rect(400+x*0.2,150+y*0.2,10,10);
-        ctx.fill();
-        
-    }
-    ctx.beginPath();
-    ctx.rect(400,300,100,100);
-    ctx.fill();
-    ctx.font = "25px Arial";
-
-    ctx.fillText(evaluate(), 420, 250)
+    
+    if(dev_mode) dev_tools()
+    
 }
 
 //Updates board when window has loaded
@@ -275,63 +281,54 @@ move_properties = {
 }
 
 
-function move(t, move, promotion = 0) {
-    let mover = checked_moves(t)
+function move(m) {
     let type_of_move
-    if (!mover[0]) {
-        return console.log("Illegal move")
-    }
-    for (let i = 0; i < mover.length + 1; i++) {
-        if (mover[i][1] == move) {
-            type_of_move = mover[i+promotion][5]
-            mm.push(mover[i+promotion])
-            break
-        }
-        else if (i == mover.length - 1) {
-            return console.log("Illegal move")
-        }
-    }
+    mm.push(m)
+    
     //normal move
-    if(!type_of_move) {
-        b[move] = b[t]
-        b[t] = 0
-        f[t] = 0
-        f[move] = 0
+    if(!m[5]) {
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        f[m[0]] = 0
+        f[m[1]] = 0
+        return
     }
     //Right castle
-    else if (type_of_move == 1) {
-        b[t+1] = b[t+3]
-        b[t+3] = 0
-        f[t+1] = 0
-        f[t+3] = 0
-        b[move] = b[t]
-        b[t] = 0
-        f[move] = 0
-        f[t] = 0
+    if (m[5] == 1) {
+        b[m[0]+1] = b[m[0]+3]
+        b[m[0]+3] = 0
+        f[m[0]+1] = 0
+        f[m[0]+3] = 0
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        f[m[1]] = 0
+        f[m[0]] = 0
+        return
     }
     //Left castle
-    else if (type_of_move == -1) {
-        b[t-1] = b[t-4]
-        b[t-4] = 0
-        f[t-1] = 0
-        f[t-4] = 0
-        b[move] = b[t]
-        b[t] = 0
-        f[move] = 0
-        f[t] = 0
+    if (m[5] == -1) {
+        b[m[0]-1] = b[m[0]-4]
+        b[m[0]-4] = 0
+        f[m[0]-1] = 0
+        f[m[0]-4] = 0
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        f[m[1]] = 0
+        f[m[0]] = 0
+        return
     }
-    else if(Math.abs(type_of_move) == 6) {
-        b[move] = b[t]
-        b[t] = 0
-        b[t+Math.sign(type_of_move)] = 0
+    if(Math.abs(m[5]) == 6) {
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        b[m[0]+Math.sign(m[5])] = 0
+        return
     }
     //Promotion
-    else { 
-        b[move] = type_of_move
-        b[t] = 0
-        f[t] = 0
-        f[move] = 0
-    }
+    b[m[1]] = m[5]
+    b[m[0]] = 0
+    f[m[1]] = 0
+    f[m[0]] = 0
+    
 
     
 }
@@ -502,7 +499,7 @@ function mousemove (event) {
         update()
         ctx.font = "30px Arial";
         ctx.fillStyle = "blue"
-        ctx.fillText(mouse_to_b(event.x, event.y) + ", " + mouse_x + ", " + mouse_y, event.x, event.y);
+        ctx.fillText(xy, event.x-canvas_boundary.left, event.y - canvas_boundary.top);
 
         if(mouse_down) {
                 for (let i = 0; i < checked_moves(down_xy).length; i++) {
@@ -543,9 +540,8 @@ function mousedown (event) {
         if(mouse_x == promotion_x) {
             for (let i = 0; i < 4; i++) {
                 if (mouse_y == promotion_y + ts*color*i) {
-                    move(down_xy,xy, 5-i-2)
-                    b[xy] = (5-i)*color
-                    
+                    console.log([down_xy, xy, b[down_xy], b[xy], f[down_xy], 5-i-2])
+                    move([down_xy, xy, b[down_xy], b[xy], f[down_xy], (5-i)*color, f[xy]])
                 }
             }
             
@@ -555,9 +551,12 @@ function mousedown (event) {
 
 
         will_update = true
-        update()
     }
-
+    if(edit) {
+        b[xy] = parseInt(document.getElementById('Edit_piece').value)
+        f[xy] = 0
+    }
+    update()
    
 }
 
@@ -574,7 +573,18 @@ function mouseup () {
                     let x = xy % 10
                     let y = Math.floor(xy/10) - 1
                     let down_y = Math.floor(down_xy/10) - 1
-                    if (Math.abs(b[down_xy]) == 1 && y == 4.5+3.5*color && down_y == 4.5+2.5*color) {
+                    if (Math.abs(b[down_xy]) == 1 && Math.floor(xy/10) == 5.5+3.5*color && down_y == 4.5+2.5*color) {
+                        for (let i = 0; i < checked_moves(down_xy).length; i++) {
+                            if (checked_moves(down_xy)[i].includes(xy)) {
+                                console.log("pe")
+                                break
+                            }
+                            if (i == checked_moves(down_xy).length - 1) {
+                                mouse_down = false
+                                return
+                            }
+                        }
+                    
                         will_update = false
                         promotion_y = mouse_y
                         promotion_x = mouse_x
@@ -605,7 +615,15 @@ function mouseup () {
                     }
 
                     else {
-                        move(down_xy, xy)
+                        for (let i = 0; i < checked_moves(down_xy).length; i++) {
+                            if (checked_moves(down_xy)[i][1] == xy) {
+                                move(checked_moves(down_xy)[i])
+                                mouse_down = false
+                                return
+                            }
+                            
+                        }
+                        console.log("Illegal move!")
                     }
 
                     
@@ -670,10 +688,7 @@ function movegen(depth) {
     
         legal_moves.forEach(m => {
 
-            if(Math.abs(m[5]) > 1 && Math.abs(m[5]) < 6) {
-                move(m[0],m[1],5-Math.abs(m[5]))
-            }
-            else move(m[0],m[1])
+            move(m)
             numPositions += movegen(depth-1)
             unmake_lm()
 
@@ -682,12 +697,11 @@ function movegen(depth) {
     return numPositions
 }
 
-let t0 = Date.now()
-console.log(movegen(10))
-t1 = Date.now()
-console.log(t1-t0)
+/*let t0 = Date.now()
+console.log(movegen(5))
+let t1 = Date.now()
+console.log(t1-t0)*/
 
-update()
 
 
 function evaluate() {
@@ -713,60 +727,103 @@ function evaluate() {
     return evaluation
 }
 
-console.log(evaluate())
 
-function minimax(depth, maximizing_player) {
+function minimax(depth, alpha, beta, maximizing_player) {
     if (depth == 0) {
         return evaluate()
     }
-
-    if(!all_legal_moves(maximizing_player).length) {
-        console.log("po")
+    if((maximizing_player == 1 || maximizing_player == -1) && !all_legal_moves(maximizing_player).length) {
         if (t_is_hit(b.indexOf(6*maximizing_player), maximizing_player*-1)) { //ÆNDR
+            console.log("Checkmate!")
             return -Infinity
         }
-        console.log("po")
+        console.log("Stalemate!")
         return 0
     }
 
     if (maximizing_player == 1) {
         max_eval = -Infinity
-        all_legal_moves(maximizing_player).forEach(m => {
-            if(Math.abs(m[5]) > 1 && Math.abs(m[5]) < 6) {
-                
-                move(m[0],m[1],5-Math.abs(m[5]))
-            }
-            else move(m[0],m[1])
-            evaluation = minimax(depth -1, -1)
-            unmake_lm()
+        for (let i = 0; i < all_legal_moves(maximizing_player).length; i++) {
+            let m = all_legal_moves(maximizing_player)[i]
+            
+        
+            move(m)
 
+            evaluation = minimax(depth -1, alpha, beta, -1)
+
+            unmake_lm()
             max_eval = Math.max(max_eval, evaluation)
-        })
+            alpha = Math.max(alpha, evaluation)
+            if (beta <= alpha) {
+                break
+            }
+        }
         return max_eval
 
     }
     else if (maximizing_player == -1) {
         min_eval = Infinity
-        all_legal_moves(maximizing_player).forEach(m => {
-            if(Math.abs(m[5]) > 1 && Math.abs(m[5]) < 6) {
-                move(m[0],m[1],5-Math.abs(m[5]))
-            }
-            else move(m[0],m[1])
-            evaluation = minimax(depth -1, 1)
+        for (let i = 0; i < all_legal_moves(maximizing_player).length; i++) {
+            let m = all_legal_moves(maximizing_player)[i]
+            move(m)
+
+            evaluation = minimax(depth -1, alpha, beta, 1)
             unmake_lm()
             min_eval = Math.min(min_eval, evaluation)
-        })
+            beta = Math.min(beta, evaluation)
+            if(beta <= alpha) {
+                break
+            }
+        }
         return min_eval
 
     }
 }
-move(62,72)
-console.log(minimax(3,1))
 
-if (false == -1) {
-    
+/*t0 = Date.now()
+console.log(minimax(6,-Infinity, Infinity, 1))
+t1 = Date.now()
+console.log(t1-t0)*/
+
+
+function dev_tools() {
+    for (let i = 0; i < f.length; i++) {
+        let x = b_to_x(i)
+        let y = b_to_y(i)
+        
+        if(b[i] == 7) {
+            continue
+        }
+
+        if (!b[i]) {
+            ctx.fillStyle = "green"
+            
+        }
+        else {
+            ctx.fillStyle = "yellow"
+            
+        }
+        
+        if (f[i] == 1) {
+            ctx.fillStyle = "purple"
+            
+        }
+        ctx.beginPath();
+        ctx.rect(400+x*0.2,150+y*0.2,10,10);
+        ctx.fill();
+        
+    }
+    ctx.beginPath();
+    ctx.rect(400,300,100,100);
+    ctx.fill();
+    ctx.font = "25px Arial";
+
+
+    for (let i = 0; i < mm.length; i++) {
+        ctx.font = "15px Arial";
+        ctx.fillStyle = "blue"
+        ctx.fillText(mm[mm.length-1-i], 420, 50+i*15)
+    }
+    ctx.fillText(evaluate(), 420, 250)
 }
 
-console.log(all_legal_moves(-1))
-
-console.log()
