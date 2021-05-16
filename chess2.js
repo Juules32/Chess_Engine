@@ -647,6 +647,11 @@ function all_legal_moves(color) {
     return all_moves
 }
 
+function all_sorted_moves(color) {
+    return all_legal_moves(color)
+}
+
+
 function unmake_lm() {
     let lm = mm[mm.length-1] //last move
 
