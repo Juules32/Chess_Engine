@@ -788,7 +788,7 @@ function best_move(depth, color) {
     let moves = all_legal_moves(color)
     let current_best_evaluation = Infinity*color*-1
     
-    let best_moves = []
+    let best_moves = 0
     for (let i = 0; i < moves.length; i++) {
         move(moves[i])
         let test_evaluation = minimax(depth-1, -Infinity, Infinity, color*-1)
@@ -796,8 +796,7 @@ function best_move(depth, color) {
 
             if (test_evaluation >= current_best_evaluation) {
                 current_best_evaluation = test_evaluation
-                best_moves.push(i)
-                console.log(moves[i], current_best_evaluation)
+                best_moves = i
 
             }
         }
@@ -805,17 +804,16 @@ function best_move(depth, color) {
 
             if (test_evaluation <= current_best_evaluation) {
                 current_best_evaluation = test_evaluation
-                best_moves.push(i)
-                console.log(moves[i], current_best_evaluation)
+                best_moves = i
 
             }
         }
         unmake_lm()        
     }
-    return best_moves //Kan ændres tilbage til bare det bedste træk, men prøv evt. at kunne bruge best moves, når man leder efter først 1 depth, så 2 etc.
-    7adad // brug best_moves som parameter til iterativ?
+    move(moves[best_moves])
+    update() //Kan ændres tilbage til bare det bedste træk, men prøv evt. at kunne bruge best moves, når man leder efter først 1 depth, så 2 etc.
+    // brug best_moves som parameter til iterativ?
 }
-
 
 function dev_tools() {
     for (let i = 0; i < f.length; i++) {
