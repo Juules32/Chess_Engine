@@ -628,7 +628,11 @@ function evaluate() {
     for (let i = 0; i < f.length; i++) {
         let tile = b[i]
         evaluation += get_piece_value(tile)
-        if(tile && tile != 7) evaluation += pseudo_moves(i).length*0.01*Math.sign(tile)
+        
+        //It's good if minor pieces reach many squares
+        if (tile && Math.abs(tile) < 5) {
+            evaluation += pseudo_moves(i).length*0.01*Math.sign(tile)
+        }
     }
     return evaluation
 }
@@ -647,6 +651,8 @@ function all_sorted_moves(color) {
         if(Math.abs(m[5]) == 5) {
             score += 9*color
         }
+
+        //Find ikke kun positive aspekter, også NEGATIVE
         m[7] = score
     })
     moves = moves.sort(function (a, b) {
@@ -746,3 +752,5 @@ function computer_move(time = 1) {
 }
 
 console.log(all_sorted_moves(1))
+
+console.log(pseudo_moves(22))
