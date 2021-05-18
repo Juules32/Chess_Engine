@@ -1,5 +1,4 @@
 /*
-sorter moves i all_legal_moves efter vigtighed for hurtigere at finde de gode moves
 
 r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R
 
@@ -10,6 +9,9 @@ r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1
 k7/P7/K7/PP/8/8/8/8
 rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 
+
+Lav bedre promotion.
+Lav eval bedre efter centre control og castling
 */
 
 //Defining canvas
@@ -266,9 +268,7 @@ move_properties = {
     6: function(t, color) {return NK_moves(t, [9, 10, 11, -1, 1, -9, -10, -11], color)},
 }
 
-function pseudo_moves(t) {
-    let type = Math.abs(b[t])
-    let color = Math.sign(b[t])
+function pseudo_moves(t, type = Math.abs(b[t]), color = Math.sign(b[t])) {
     //Gets move properties from move_properties
     return move_properties[type](t, color)
 }
@@ -511,6 +511,8 @@ function mousedown (event) {
         down_xy = mouse_to_b(event.x,event.y)
         if(b[down_xy] && b[down_xy] != 7) mouse_down = true
         if((mouse_x == 400 || mouse_x == 450) && mouse_y > 250) unmake_lm()
+        if((mouse_x == 500 || mouse_x == 550) && mouse_y > 250) console.log(evaluate())
+
     }
     else {
         let color = Math.sign(b[down_xy])
@@ -605,7 +607,6 @@ function movegen(depth) {
 }
 
 function get_piece_value(piece) {
-    if (piece != 7 && piece) {
         if(piece > 0) {
             if(piece == 1) return piece
             else if(piece == 2 || piece == 3) return 3
@@ -618,25 +619,54 @@ function get_piece_value(piece) {
             else if (piece == -4) return -5
             else return -9
         }
-    }
     return 0
+}
+
+function endgame_eval (better_king_tile, worse_king_tile, endgame_weight) {
+    let evaluation = 0
+    let better_side = Math.sign(b[better_king_tile])
+
+    //Better side gets points equal to the distance the opposing king is from centre
+    let worse_king_rank = worse_king_tile % 10
+    let worse_king_file = Math.floor(worse_king_tile)
+
+    let worse_king_dist_to_centre_file = Math.max(4-worse_king_file, 5-worse_king_file)
+    let worse_king_dist_to_centre_rank = Math.max(4-worse_king_rank, 5-worse_king_rank)
+    let worse_king_dist_from_centre = worse_king_dist_to_centre_file+worse_king_dist_to_centre_rank
+    evaluation += worse_king_dist_from_centre*better_side
+    return evaluation*endgame_weight*1
 }
 
 function evaluate() {
     let evaluation = 0
-    
+    let amount_of_pieces = 0
+    let black_king_tile = 0
+    let white_king_tile = 0
+
     for (let i = 0; i < f.length; i++) {
-        let tile = b[i]
-        evaluation += get_piece_value(tile)
+        let piece = b[i]
+        if (piece != 7 && piece) {
+            evaluation += get_piece_value(piece)*100
+            amount_of_pieces += 1
+            if(piece == 6) white_king_tile = i
+            else if(piece == -6) black_king_tile = i
+
+            if (Math.abs(piece) < 5) {
+                evaluation += pseudo_moves(i).length*Math.sign(piece)
+            }
+        }
+        
         
         //It's good if minor pieces reach many squares
-        if (tile && Math.abs(tile) < 5) {
-            evaluation += pseudo_moves(i).length*0.01*Math.sign(tile)
-        }
-    }
-    return evaluation
-}
+        
 
+        //Noget med castling && centre control
+    }
+    
+    
+    
+    return evaluation/100
+}
 function all_sorted_moves(color) {
     let moves = all_legal_moves(color)
     moves.forEach(m => {
@@ -644,13 +674,18 @@ function all_sorted_moves(color) {
 
         //Score baseret på capture værdi minus piece værdi
         if (m[3]) {
-            score = 3*get_piece_value(m[1]) - m[2]
+            score = Math.abs(10*get_piece_value(b[m[1]])) - Math.abs(m[2])
         }
 
         //Promotion to queen is good
         if(Math.abs(m[5]) == 5) {
             score += 9*color
         }
+        if(all_pseudo_moves(color*-1).includes(m[1])) {
+            score -= Math.abs(get_piece_value(m[2]))
+        }
+        
+        //score += pseudo_moves(m[1], Math.abs(m[2]), Math.sign(m[2])).length*0.01
 
         //Find ikke kun positive aspekter, også NEGATIVE
         m[7] = score
@@ -699,6 +734,9 @@ function minimax(depth, alpha, beta, maximizing_player) {
 function best_move(depth, color) {
     let current_best_evaluation = Infinity*color*-1
     let moves = all_legal_moves(color)
+    if (moves.length == 1) {
+        return moves[0]
+    }
     let current_best_move = []
     for (let i = 0; i < moves.length; i++) {
         move(moves[i])
@@ -725,21 +763,26 @@ function best_in_time (color, time = 1) {
     let moves = all_legal_moves(color)
     let depth = 1
     let current_best_move = []
-    while (Date.now() - t0 < time*1000/(moves.length*0.8)) {
-        current_best_move = best_move(depth, color)
-        ctx.fillStyle = "white"
-        ctx.beginPath();
-        ctx.rect(400, 0,  w, h);
-        ctx.fill();
-        ctx.font = "20px Arial";
-        ctx.fillStyle = "blue"
-        ctx.fillText("Depth reached: " + depth, 420, 50)
-        ctx.fillText("Computer Move: " + tile_to_letternumber(current_best_move[0]) + " to " + tile_to_letternumber(current_best_move[1]), 420, 100)
-        ctx.fillText("Time Spent: " + (Date.now() - t0)/1000 + " seconds", 420, 150)
-        ctx.fillText("Evaluation: " + evaluate(), 420, 200)
-        depth += 1
+    if(moves.length == 1) {
+        current_best_move = moves[0]
     }
-    console.log(current_best_move)
+    else {
+        while (Date.now() - t0 < time*1000/(moves.length*0.3)) {
+            current_best_move = best_move(depth, color)
+            console.log(current_best_move)
+            depth += 1
+        }
+    }
+    ctx.fillStyle = "white"
+    ctx.beginPath();
+    ctx.rect(400, 0,  w, h);
+    ctx.fill();
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "blue"
+    ctx.fillText("Depth reached: " + depth, 420, 50)
+    ctx.fillText("Computer Move: " + tile_to_letternumber(current_best_move[0]) + " to " + tile_to_letternumber(current_best_move[1]), 420, 100)
+    ctx.fillText("Time Spent: " + (Date.now() - t0)/1000 + " seconds", 420, 150)
+    
     return current_best_move
 }
 
@@ -748,9 +791,12 @@ function computer_move(time = 1) {
     if (!mm.length) color = 1
     else if (Math.sign(mm[mm.length-1][2]) == 1) color = -1
     move(best_in_time(color, time))
+    ctx.fillText("Evaluation: " + evaluate(), 420, 200)
     update()
 }
 
 console.log(all_sorted_moves(1))
 
 console.log(pseudo_moves(22))
+
+console.log(pseudo_moves(55, 2, 1))
