@@ -3,35 +3,37 @@
     <body>
         <link rel="stylesheet" type="text/css" href="style.css">
         
-        
-        <div>
-            <input size="50px" id="FEN_input" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"></input>
-        <button onclick="FEN_generate(document.getElementById('FEN_input').value)">Generate from FEN</button>
-        </br>
-        <input size="5px" id="Edit_piece" value="0"></input>
-        <button onclick="get_edit()">Edit mode ON/OFF</button>
-        </br>
-        <input size="5px" id="gen_depth" value="4"></input>
-        <button onclick="console.log(movegen(document.getElementById('gen_depth').value))">Perform movegen</button>
-        </br>
-        <input size="5px" id="DEEP" value="5"></input>
-        <input size="5px" id="Side"></input>
-        <button onclick="console.log(best_move(document.getElementById('DEEP').value, document.getElementById('Side').value))">Find computer move</button>
-        </br>
         <button onclick="get_dev()">Developer mode ON/OFF</button>
-        <button onclick="console.log(all_legal_moves(1))">LEGAL mode ON/OFF</button>
+        <div id="dev_buttons">
+            <input size="50px" id="FEN_input" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"></input>
+            <button onclick="FEN_generate(document.getElementById('FEN_input').value)">Generate from FEN</button>
+        </br>
+            <input size="5px" id="Timee" value="3"></input>
+            <button onclick="computer_move(document.getElementById('Timee').value)">Play Against The Computer</button>
+        </br>
+            <input size="5px" id="Edit_piece" value="0"></input>
+            <button onclick="get_edit()">Edit mode ON/OFF</button>
+        </br>
+            <input size="5px" id="gen_depth" value="4"></input>
+            <button onclick="console.log(movegen(document.getElementById('gen_depth').value))">Perform movegen</button>
+        </br>
+            <input size="5px" id="DEEP" value="5"></input>
+            <input size="5px" id="Side" value="1"></input>
+            <button onclick="console.log(best_move(document.getElementById('DEEP').value, document.getElementById('Side').value))">Find computer move</button>
+        </br>
+            <button onclick="console.log(all_legal_moves(1))">LEGAL mode ON/OFF</button>
+        </br>
         <button onclick="console.log(all_sorted_moves(1)); console.log(all_sorted_moves(-1))">Sorted moves</button>
+            </br>
+            <button onclick="unmake_lm(); update()">Undo move</button>
         </br>
-        </br>
-        </br>
-        <input size="5px" id="Timee" value="3"></input>
-        <button onclick="computer_move(document.getElementById('Timee').value)">Play Against The Computer</button>
 
+            
+        </div>
         
         </br>
             <canvas id="visuals" style="border: 1px solid #000000"></canvas>
             
-        </div>
         
         <script src="chess2.js"></script>
     </body>

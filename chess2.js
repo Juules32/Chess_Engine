@@ -8,6 +8,7 @@ r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1
 
 k7/P7/K7/PP/8/8/8/8
 rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+2bqkbn1/2pppp2/np2N3/r3P1p1/p2N2B1/5Q2/PPPPKPP1/RNB2r2 w KQkq - 0 1
 
 
 Lav bedre promotion.
@@ -17,8 +18,12 @@ Lav eval bedre efter centre control og castling
 //Defining canvas
 c = document.getElementById("visuals")
 ctx = c.getContext("2d");
-c.width = 800
 c.height = 400
+c.width = 2*c.height
+
+const h = c.height
+const ts = h/8 // tile size
+
 
 //Event listeners
 c.onmousemove = mousemove
@@ -31,10 +36,6 @@ canvas_boundary = c.getBoundingClientRect()
 //Disables right click menu in canvas
 c.addEventListener('contextmenu', event => event.preventDefault());
 
-const w = c.width
-const h = c.height
-const ts = h/8 // tile size
-
 //Piece names sorteres efter værdi
 piece_names = [null, "wp", "wn", "wb", "wr", "wq", "wk", "bk", "bq", "br", "bb", "bn", "bp"]
 var images = []
@@ -43,15 +44,26 @@ for (let i = 1; i < piece_names.length; i++) {
     images[i].src = "./" + piece_names[i] + ".png"
 }
 
+const board = new Image()
+board.src = "./board.png"
+
+
 var mm = [] //Match Moves
 var b = [] //Board
 var f = [] //First move
 
+document.getElementById('dev_buttons').style.display = 'block'
+
 //Turns developer mode on/off
-dev_mode = false
 function get_dev() {
-    if (dev_mode) dev_mode = false
-    else dev_mode = true
+    if (document.getElementById('dev_buttons').style.display == 'none') {
+        document.getElementById('dev_buttons').style.display = 'block'
+        c.width = 2*h
+    } 
+    else {
+        document.getElementById('dev_buttons').style.display = 'none'
+        c.width = h
+    }
     update()
 }
 
@@ -146,52 +158,21 @@ function FEN_generate(code) {
     update()
 }
 
-//Development tools til debugging etc.
-function dev_tools() {
-    ctx.fillStyle = "white"
-    ctx.beginPath();
-    ctx.rect(ts*8, 0,  w, h);
-    ctx.fill();
-    for (let i = 0; i < f.length; i++) {
-        let x = b_to_x(i)
-        let y = b_to_y(i)
-        if(b[i] == 7) continue
-        if (!b[i]) ctx.fillStyle = "green"
-        else ctx.fillStyle = "yellow"
-        if (f[i] == 1) ctx.fillStyle = "purple"
-        ctx.beginPath();
-        ctx.rect(400+x*0.2,150+y*0.2,10,10);
-        ctx.fill();
-    }
-    ctx.beginPath();
-    ctx.rect(400,300,100,100);
-    ctx.fill();
-    ctx.font = "25px Arial";
-    for (let i = 0; i < mm.length; i++) {
-        ctx.font = "15px Arial";
-        ctx.fillStyle = "blue"
-        ctx.fillText(mm[mm.length-1-i], 420, 50+i*15)
-    }
-    ctx.fillText(evaluate(), 420, 250)
-}
+var moving_square = 200
 
 function update() {
-    //Draws Chess tiles
-    for (let file = 0; file < 8; file++) {
-        for (let rank = 0; rank < 8; rank++) {
-            if((file+rank) % 2 != 0) ctx.fillStyle = "brown"
-            else ctx.fillStyle = "white"
-            ctx.beginPath();
-            ctx.rect(rank*ts, file*ts, ts, ts);
-            ctx.fill();
-        }
-    }
+    //Updates canvas boundary
+    canvas_boundary = c.getBoundingClientRect()
+
+    //Draws Chess board
+    ctx.drawImage(board,0,0, h, h)
 
     //Draws Pieces
     for (let i = 0; i < 120; i++) {
         if (b[i] != 7 && b[i] != 0) {
             let x = i % 10
             let y = Math.floor(i/10)
+            if(i != moving_square)
             if (Math.sign(b[i]) == 1) {
                 ctx.drawImage(images[b[i]], x*ts - ts, h - y*ts + ts, ts, ts)
                 continue
@@ -202,7 +183,39 @@ function update() {
             }
         }
     }
-    if(dev_mode) dev_tools()
+    ctx.fillStyle = "white"
+    ctx.beginPath();
+    ctx.rect(h, 200,  h, h);
+    ctx.fill();
+    for (let i = 0; i < f.length; i++) {
+        let x = b_to_x(i)
+        let y = b_to_y(i)
+        if(b[i] == 7) continue
+        if (!b[i]) ctx.fillStyle = "green"
+        else ctx.fillStyle = "yellow"
+        if (f[i] == 1) ctx.fillStyle = "purple"
+        ctx.beginPath();
+        ctx.rect(h+x*0.2,300+y*0.2,h*0.02, h*0.02);
+        ctx.fill();
+    }
+    
+    ctx.font = "15px Arial";
+    ctx.fillStyle = "blue"
+    for (let i = 0; i < mm.length; i++) {
+        ctx.fillText(mm[mm.length-1-i], h*1.3, h*0.6+i*15)
+    }
+
+    if (!all_legal_moves(player_to_move()).length) {
+        if (t_is_hit(b.indexOf(6*player_to_move()), -player_to_move())) {
+            let word
+            if(player_to_move() == 1) word = "Black"
+            else word = "White"
+            ctx.font = "30px Arial";
+            ctx.fillStyle = "blue"
+            ctx.fillText(word + " wins!", h/2-50, h/2-10);
+        }
+        else ctx.fillText("Stalemate!", h/2-50, h/2-10);
+    }
 }
 
 //Updates board when window has loaded
@@ -474,16 +487,14 @@ function tile_to_letternumber(tile) {
 }
 
 function mousemove (event) {
+    
     mouse_x = Math.floor((event.x - canvas_boundary.left)/ts)*ts 
     mouse_y = Math.floor((event.y - canvas_boundary.top)/ts)*ts
     if(will_update) {
         xy = mouse_to_b(event.x, event.y)
         update()
-        ctx.font = "30px Arial";
-        ctx.fillStyle = "blue"
-        if (event.x-canvas_boundary.left < h) {
-            ctx.fillText(tile_to_letternumber(xy), event.x-canvas_boundary.left - 33, event.y - canvas_boundary.top);
-        }
+        
+        
         if(mouse_down) {
             for (let i = 0; i < checked_moves(down_xy).length; i++) {
                 ctx.fillStyle = "gray"
@@ -491,28 +502,35 @@ function mousemove (event) {
                 ctx.arc(b_to_x(checked_moves(down_xy)[i][1]) - ts/2, b_to_y(checked_moves(down_xy)[i][1]) + 3*ts/2, ts/ 5, 0, 7);
                 ctx.fill();
             }
-            let p
-            if (down_x/ts % 2 == 0) p = 1
-            else p = 0
-            if ((down_y/ts + p) % 2 == 1) ctx.fillStyle = "white"
-            else ctx.fillStyle = "brown"
-            ctx.beginPath();
-            ctx.rect(down_x, down_y, ts, ts)
-            ctx.fill();
+            moving_square = down_xy
             ctx.drawImage(images.slice(b[down_xy])[0],event.x - canvas_boundary.left - ts/2,event.y - canvas_boundary.top - ts/2,ts,ts)
         }
+        else {
+            moving_square = 200
+            update()
+        }
+    }
+    if (event.x-canvas_boundary.left < h && document.getElementById('dev_buttons').style.display == 'block') {
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "blue"
+        ctx.fillText(tile_to_letternumber(xy), event.x-canvas_boundary.left - 33, event.y - canvas_boundary.top);
     }
 }
 
+function player_to_move() {
+    let player_to_move
+    if (!mm.length) player_to_move = 1
+    else if(Math.sign(mm[mm.length-1][2]) == 1) player_to_move = -1
+    else player_to_move = 1
+    return player_to_move
+}
 function mousedown (event) {
     if (will_update) {
         down_x = mouse_x
         down_y = mouse_y
         down_xy = mouse_to_b(event.x,event.y)
-        if(b[down_xy] && b[down_xy] != 7) mouse_down = true
-        if((mouse_x == 400 || mouse_x == 450) && mouse_y > 250) unmake_lm()
-        if((mouse_x == 500 || mouse_x == 550) && mouse_y > 250) console.log(evaluate())
-
+        
+        if(b[down_xy] && b[down_xy] != 7 && Math.sign(b[down_xy]) == player_to_move()) mouse_down = true
     }
     else {
         let color = Math.sign(b[down_xy])
@@ -533,13 +551,11 @@ function mousedown (event) {
 }
 
 function mouseup () {
+
     if(will_update) {
         if(mouse_down) {
                 if(xy != down_xy) {
                     let color = Math.sign(b[down_xy])
-                    let x = xy % 10
-                    let y = Math.floor(xy/10) - 1
-                    let down_y = Math.floor(down_xy/10) - 1
                     if (Math.abs(b[down_xy]) == 1 && Math.floor(xy/10) == 5.5+3.5*color) {
                         for (let i = 0; i < checked_moves(down_xy).length; i++) {
                             if (checked_moves(down_xy)[i].includes(xy)) {
@@ -622,42 +638,36 @@ function get_piece_value(piece) {
     return 0
 }
 
-function endgame_eval (better_king_tile, worse_king_tile, endgame_weight) {
-    let evaluation = 0
-    let better_side = Math.sign(b[better_king_tile])
-
-    //Better side gets points equal to the distance the opposing king is from centre
-    let worse_king_rank = worse_king_tile % 10
-    let worse_king_file = Math.floor(worse_king_tile)
-
-    let worse_king_dist_to_centre_file = Math.max(4-worse_king_file, 5-worse_king_file)
-    let worse_king_dist_to_centre_rank = Math.max(4-worse_king_rank, 5-worse_king_rank)
-    let worse_king_dist_from_centre = worse_king_dist_to_centre_file+worse_king_dist_to_centre_rank
-    evaluation += worse_king_dist_from_centre*better_side
-    return evaluation*endgame_weight*1
-}
 
 function evaluate() {
     let evaluation = 0
-    let amount_of_pieces = 0
-    let black_king_tile = 0
-    let white_king_tile = 0
-
+    
     for (let i = 0; i < f.length; i++) {
         let piece = b[i]
         if (piece != 7 && piece) {
             evaluation += get_piece_value(piece)*100
-            amount_of_pieces += 1
-            if(piece == 6) white_king_tile = i
-            else if(piece == -6) black_king_tile = i
-
+            
+            //It's good if minor pieces reach many squares
             if (Math.abs(piece) < 5) {
                 evaluation += pseudo_moves(i).length*Math.sign(piece)
             }
+            if(piece == 6) {
+                if(i % 10 == 3 && b[i+1] == 4) {
+                    evaluation += 10
+                }
+                else if(i % 10 == 7 && b[i-1] == 4) {
+                    evaluation += 50
+                }
+            }
+            else if(piece == -6) {
+                if(i % 10 == 3 && b[i+1] == -4) {
+                    evaluation -= 10
+                }
+                else if(i % 10 == 7 && b[i-1] == -4) {
+                    evaluation -= 50
+                }
+            }
         }
-        
-        
-        //It's good if minor pieces reach many squares
         
 
         //Noget med castling && centre control
@@ -701,14 +711,13 @@ function minimax(depth, alpha, beta, maximizing_player) {
     if (depth == 0) return evaluate()
     if((maximizing_player == 1 || maximizing_player == -1) && !all_legal_moves(maximizing_player).length) {
         if (t_is_hit(b.indexOf(6*maximizing_player), maximizing_player*-1)) {
-            console.log("Checkmate!")
-            return -Infinity
+            return -Infinity*maximizing_player
         }
-        console.log("Stalemate!")
         return 0
     }
+    let moves = all_sorted_moves(maximizing_player)
+
     if (maximizing_player == 1) {
-        let moves = all_sorted_moves(maximizing_player)
         for (let i = 0; i < moves.length; i++) {
             move(moves[i])
             evaluation = minimax(depth -1, alpha, beta, -1)
@@ -719,7 +728,6 @@ function minimax(depth, alpha, beta, maximizing_player) {
         return alpha
     }
     else if (maximizing_player == -1) {
-        let moves = all_sorted_moves(maximizing_player)
         for (let i = 0; i < moves.length; i++) {
             move(moves[i])
             evaluation = minimax(depth -1, alpha, beta, 1)
@@ -734,13 +742,14 @@ function minimax(depth, alpha, beta, maximizing_player) {
 function best_move(depth, color) {
     let current_best_evaluation = Infinity*color*-1
     let moves = all_legal_moves(color)
+    if(!moves.length) return
     if (moves.length == 1) {
         return moves[0]
     }
-    let current_best_move = []
+    let current_best_move = 0
     for (let i = 0; i < moves.length; i++) {
         move(moves[i])
-        let test_evaluation = minimax(depth-1, -Infinity, Infinity, color*-1)
+        let test_evaluation = minimax(depth-1, -Infinity, Infinity, player_to_move())
         if(color == 1) {
             if (test_evaluation > current_best_evaluation) {
                 current_best_evaluation = test_evaluation
@@ -762,7 +771,8 @@ function best_in_time (color, time = 1) {
     let t0 = Date.now()
     let moves = all_legal_moves(color)
     let depth = 1
-    let current_best_move = []
+    let current_best_move = 0
+    if(!moves.length) return
     if(moves.length == 1) {
         current_best_move = moves[0]
     }
@@ -775,28 +785,20 @@ function best_in_time (color, time = 1) {
     }
     ctx.fillStyle = "white"
     ctx.beginPath();
-    ctx.rect(400, 0,  w, h);
+    ctx.rect(h, 0,  h, h);
     ctx.fill();
     ctx.font = "20px Arial";
     ctx.fillStyle = "blue"
-    ctx.fillText("Depth reached: " + depth, 420, 50)
-    ctx.fillText("Computer Move: " + tile_to_letternumber(current_best_move[0]) + " to " + tile_to_letternumber(current_best_move[1]), 420, 100)
-    ctx.fillText("Time Spent: " + (Date.now() - t0)/1000 + " seconds", 420, 150)
+    ctx.fillText("Depth reached: " + depth, h+20, 50)
+    ctx.fillText("Computer Move: " + tile_to_letternumber(current_best_move[0]) + " to " + tile_to_letternumber(current_best_move[1]), h+20, 100)
+    ctx.fillText("Time Spent: " + (Date.now() - t0)/1000 + " seconds", h+20, 150)
     
     return current_best_move
 }
 
 function computer_move(time = 1) {
-    let color = 1
-    if (!mm.length) color = 1
-    else if (Math.sign(mm[mm.length-1][2]) == 1) color = -1
-    move(best_in_time(color, time))
-    ctx.fillText("Evaluation: " + evaluate(), 420, 200)
+    move(best_in_time(player_to_move(), time))
+    ctx.fillText("Evaluation: " + evaluate(), h+20, 200)
     update()
 }
 
-console.log(all_sorted_moves(1))
-
-console.log(pseudo_moves(22))
-
-console.log(pseudo_moves(55, 2, 1))
