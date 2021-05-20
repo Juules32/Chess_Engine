@@ -10,7 +10,7 @@
             <button onclick="FEN_generate(document.getElementById('FEN_input').value)">Generate from FEN</button>
         </br>
             <input size="5px" id="Timee" value="3"></input>
-            <button onclick="computer_move(document.getElementById('Timee').value)">Play Against The Computer</button>
+            <button onclick="computer_move(document.getElementById('Timee').value)">Play Computer move</button>
         </br>
             <input size="5px" id="Edit_piece" value="0"></input>
             <button onclick="get_edit()">Edit mode ON/OFF</button>
@@ -22,9 +22,9 @@
             <input size="5px" id="Side" value="1"></input>
             <button onclick="console.log(best_move(document.getElementById('DEEP').value, document.getElementById('Side').value))">Find computer move</button>
         </br>
-            <button onclick="console.log(all_legal_moves(1))">LEGAL mode ON/OFF</button>
+            <button onclick="console.log(all_legal_moves(1)); console.log(all_legal_moves(-1))">All legal moves</button>
         </br>
-        <button onclick="console.log(all_sorted_moves(1)); console.log(all_sorted_moves(-1))">Sorted moves</button>
+        <button onclick="console.log(all_sorted_moves(1)); console.log(all_sorted_moves(-1))">All sorted moves</button>
             </br>
             <button onclick="unmake_lm(); update()">Undo move</button>
         </br>

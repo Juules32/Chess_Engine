@@ -1,4 +1,6 @@
 /*
+Useful FEN-strings:
+
 r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R
 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8
 r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1
@@ -10,7 +12,7 @@ rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 //Defining canvas
 c = document.getElementById("visuals")
 ctx = c.getContext("2d");
-c.height = 400
+c.height = 550
 c.width = c.height
 
 const h = c.height //canvas height is constant
@@ -81,7 +83,7 @@ v = {
     p: -1
 }
 
-//Gør brættet rent
+//Cleans the board
 function clear_board() {
     for (let i = 0; i < 120; i++) {
         if(i < 20 || i > 100 || i % 10 == 9 || i % 10 == 0) {
@@ -150,7 +152,7 @@ function FEN_generate(code) {
 }
 
 var moving_square
-var computer_playing = false
+var computer_playing = true
 
 function update() {
     //Updates canvas boundary
@@ -209,6 +211,8 @@ function update() {
             ctx.fillText(word + " wins!", h/2-50, h/2-10);
         }
         else ctx.fillText("Stalemate!", h/2-50, h/2-10);
+        ctx.font = "15px Arial";
+        ctx.fillStyle = "blue"
     }
 }
 
@@ -383,6 +387,7 @@ mm[mm.length - 1][0] == mm[mm.length - 1][1] + 20*color && mm[mm.length - 1][2] 
 
 //For moving pieces
 function move(m) {
+    if(m == undefined) return
     mm.push(m)
     //normal move
     if(!m[5]) {
@@ -602,13 +607,21 @@ function mouseup () {
                         if (checked_moves(down_xy)[i][1] == xy) {
                             move(checked_moves(down_xy)[i])
                             mouse_down = false
-                            if(computer_playing && player_to_move() == -1) computer_move(document.getElementById('Average_time').value)
+                            if(computer_playing && player_to_move() == -1) {
+                                setTimeout(() =>
+                                    computer_move(document.getElementById('Average_time').value)
+                                , 200)
+                            }
                             return
                         }
                     }
                     console.log("Illegal move!")
                 }
-            if(computer_playing && player_to_move() == -1) computer_move(document.getElementById('Average_time').value)
+                if(computer_playing && player_to_move() == -1) {
+                    setTimeout(() =>
+                        computer_move(document.getElementById('Average_time').value)
+                    , 200)
+                }
             }
         }
         mouse_down = false
@@ -696,6 +709,8 @@ function all_sorted_moves(color) {
 //Finds the best possible evaluation on depth. Alpha-beta pruning is utilized
 function minimax(depth, alpha, beta, maximizing_player) {
     if (depth == 0) return evaluate()
+
+    //Skakmat eller stalemate hvis den aktive spiller ikke har flere træk
     if((maximizing_player == 1 || maximizing_player == -1) && !all_legal_moves(maximizing_player).length) {
         if (t_is_hit(b.indexOf(6*maximizing_player), maximizing_player*-1)) {
             return -Infinity*maximizing_player
@@ -760,10 +775,8 @@ function best_in_time (color, time = 1) {
     let moves = all_legal_moves(color)
     let depth = 1
     let current_best_move = 0
-    if(!moves.length) return
-    if(moves.length == 1) {
-        current_best_move = moves[0]
-    }
+    if(!moves.length) return 
+    if(moves.length == 1) current_best_move = moves[0]
     else {
         while (Date.now() - t0 < time*1000/(moves.length*0.3)) {
             current_best_move = best_move(depth, color)
