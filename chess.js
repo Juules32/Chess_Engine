@@ -1,35 +1,22 @@
 /*
-
-KONKLUSION FOR DENNE VERSION:
-Ikke godt at store x og y som adskilte værdier. bedre at nummerere tiles fra 0-63 (eller måske 1-64)
-Til undo: Husk ikke trækkene, men ændringerne ved board:
-gem info om de to tiles, det altid handler om ved move, og gem deres informationer før trækket
-Castling er den eneste exception
-https://softwareengineering.stackexchange.com/questions/188903/what-would-be-the-best-way-to-store-movements-on-a-game-to-allow-a-rollback
-
-Lav funktioner godt fra starten
-
-Naturligvis:
-Bedre udregning af castling
-ændr abrreviation
-måden rooks, bishops og queens adskilles på: 
-Skriv programmet med flere individuelle js filer
-
-TODO:
-
-
-lav turskifte
-
-lav flere pawn promotion muligheder
-
-lav castling, promotion, check_check for black, pessant
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R
+8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8
+r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1
+k7/P7/K7/PP/8/8/8/8
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+2bqkbn1/2pppp2/np2N3/r3P1p1/p2N2B1/5Q2/PPPPKPP1/RNB2r2 w KQkq - 0 1
 */
 
+//Defining canvas
 c = document.getElementById("visuals")
 ctx = c.getContext("2d");
-c.width = 800
 c.height = 400
+c.width = c.height
 
+const h = c.height //canvas height is constant
+const ts = h/8 // tile size
+
+//Event listeners
 c.onmousemove = mousemove
 c.onmousedown = mousedown
 document.onmouseup = mouseup
@@ -40,785 +27,777 @@ canvas_boundary = c.getBoundingClientRect()
 //Disables right click menu in canvas
 c.addEventListener('contextmenu', event => event.preventDefault());
 
-w = c.width
-h = c.height
-ts = h/8 //b[x+1][y+1] size
-
-
-piece_names = ["wp", "wr", "wn", "wb", "wq", "wk", "bp", "br", "bn", "bb", "bq", "bk"]
+//Piece names sorted by value
+piece_names = [null, "wp", "wn", "wb", "wr", "wq", "wk", "bk", "bq", "br", "bb", "bn", "bp"]
 var images = []
-i = 0
-for (let i = 0; i < piece_names.length; i++) {
+for (let i = 1; i < piece_names.length; i++) {
     images[i] = new Image()
     images[i].src = "./" + piece_names[i] + ".png"
 }
 
-function clear_b() {
-    let b = []
-    for (let i = 0; i < 10; i++) {
-        b.push(["O"])
-        for (let j = 0; j < 9; j++) {
-            b[i].push("O")            
-        }
+const board = new Image()
+board.src = "./board.png"
+
+var mm = [] //Match Moves
+var b = [] //Board
+var f = [] //First move
+
+//Developer options are not shown by default
+document.getElementById('dev_buttons').style.display = 'none'
+
+//Turns developer mode on/off
+function get_dev() {
+    if (document.getElementById('dev_buttons').style.display == 'none') {
+        document.getElementById('dev_buttons').style.display = 'block'
+        c.width = 2*h
+    } 
+    else {
+        document.getElementById('dev_buttons').style.display = 'none'
+        c.width = h
     }
-    return b
-}
-
-b = clear_b()
-
-class Piece {
-    constructor(color = "w") {
-        this.color = color
-    }
-    first_move = true
-    get abbreviation() {return this.color + this.constructor.name.charAt(0).toLowerCase()}
-    get image() {return images[piece_names.indexOf(this.abbreviation)]}
-
-    move(x, y) {
-        for (let i = 0; i < this.moves.length; i++) {
-            if(this.moves[i][0] == x && this.moves[i][1] == y) {
-                lm = [this.abbreviation, this.x, this.y, x, y] //ændr, så ikke hele objektet
-                if (b[x][y] != "O") {
-                    lm.push("x", b[x][y])
-                }
-                if (this.constructor.name == "King") {
-                    
-                    if(x == this.x+2) {
-                        lm.push("rc")
-                    }
-                    if(x == this.x-2) {
-                        lm.push("lc")
-                    }
-                }
-                lm.push(this.first_move)
-                mm.push(lm)
-                b[x][y] = b[this.x][this.y]
-                b[this.x][this.y] = "O"
-                update_xy(x,y)
-                this.first_move = false
-                if(ap == 1) ap = -1
-                else ap = 1
-                console.log(lm)
-                return
-            }
-        }
-        console.log("Illegal move")
-        //if mouse coords = indexof moves: change piece coords and kill piece previously there
-    }
-    get moves() {
-        let legal_moves = this.unchecked_moves
-        let x0 = this.x
-        let y0 = this.y
-        let unchecked = this.unchecked_moves
-        for (let i = 0; i < unchecked.length; i++) {
-            
-            let x = unchecked[i][0]
-            let y = unchecked[i][1]
-            let test_b = b
-            let temp = test_b[x][y]
-
-            test_b[x][y] = test_b[x0][y0]
-            test_b[x0][y0] = "O"
-            test_b[x][y].x = x
-            test_b[x][y].y = y
-            for (let j = 0; j < opponent_moves(test_b).length; j++) {
-                if(opponent_moves(test_b)[j][0] == king_position(test_b, this.color)[0] &&
-                opponent_moves(test_b)[j][1] == king_position(test_b, this.color)[1]) {
-                    legal_moves.splice(i,1, [])
-                    
-                }
-                
-            }
-            test_b[x0][y0] = test_b[x][y]
-            test_b[x][y] = temp
-            test_b[x0][y0].x = x0
-            test_b[x0][y0].y = y0
-
-                if (temp != "O" && this.color != temp.color) {
-                    legal_moves[i][2] = "x"
-                    legal_moves[i][3] = temp
-                }
-            
-            
-
-        }
-        return legal_moves
-    }
-}
-
-class PNK extends Piece { //Pawn, Knight, King
-
-    ruleCheck(move_list) { //(array)
-        //Regler for at trække: ikke 2 brikker på samme sted og aldrig udenfor brættet, 
-        //og at rykke slutter din tur og timer
-        //if(ingen overlappende brikker, inden for brættet) return true
-        
-        let confirmed_moves = []
-        for (let i = 0; i < move_list.length; i++) {
-            let x = move_list[i][0]
-            let y = move_list[i][1]
-            if((x > 8 || x < 1 || y > 8 || y < 1) || b[x][y].color == this.color) {
-                continue
-            }
-            else {
-                confirmed_moves.push(move_list[i])
-            }
-        }
-        
-        return confirmed_moves
-    }
-}
-
-class Pawn extends PNK {
-    second_move = false
-    get unchecked_moves() {
-        let direction = 1
-        if(this.color == "b") {
-            direction = -1
-        }
-        let moves = []
-        if(b[this.x][this.y+direction] == "O") {
-            moves.push([this.x, this.y+direction])
-        }
-        if(this.first_move == true && b[this.x][this.y+2*direction] == "O" && b[this.x][this.y+1*direction] == "O") {
-            moves.push([this.x, this.y+2*direction])
-        }
-        if(b[this.x-direction][this.y+direction] != "O") {
-            moves.push([this.x-direction, this.y+direction])
-        }
-        if(b[this.x+direction][this.y+direction] != "O") {
-            moves.push([this.x+direction, this.y+direction])
-        }
-
-        // en pessant
-        if(this.y == 5 && mm.length > 0) {
-            if(lm[0] == "bp" && lm[1] == this.x - 1 && lm[2] == this.y + 2 && lm[4] == this.y) {
-                
-                moves.push([this.x-1, this.y+direction])
-            }
-            if(lm[0] == "bp" && lm[1] == this.x + 1 && lm[2] == this.y + 2 && lm[4] == this.y) {
-                moves.push([this.x+1, this.y+direction])
-            }
-        }
-        if(this.y == 4 && mm.length > 0) {
-            if(lm[0] == "wp" && lm[1] == this.x - 1 && lm[2] == this.y - 2 && lm[4] == this.y) {
-                
-                moves.push([this.x-1, this.y+direction])
-            }
-            if(lm[0] == "wp" && lm[1] == this.x + 1 && lm[2] == this.y - 2 && lm[4] == this.y) {
-                moves.push([this.x+1, this.y+direction])
-            }
-        }
-        return this.ruleCheck(moves)
-    }
-    move(x,y) {
-        if(lm[0] == "bp" && x == lm[3] && y == lm[4] + 1) {
-            insert_piece(lm[3], lm[4], "O")
-            console.log("En pessant")
-        }
-        if(lm[0] == "wp" && x == lm[3] && y == lm[4] - 1) {
-            insert_piece(lm[3], lm[4], "O")
-            console.log("En pessant")
-        }
-        let first = this.first_move
-        this.second_move = false
-        super.move(x,y)
-        if (first) this.second_move = true
-        
-        let end = 8
-        if(this.color == "b") {
-            end = 1
-        }
-        if(this.y == end) {
-            insert_piece(this.x,this.y, new Queen(this.color))
-        }
-        
-    }
-}
-
-class Knight extends PNK {
-    abbreviation = this.color + "n"
-    get unchecked_moves() {
-        let moves = []
-        for (let i = -1; i < 2; i = i + 2){
-
-        moves.push([this.x+i*2, this.y+i])
-        moves.push([this.x+i*2, this.y-i])
-
-        moves.push([this.x+i, this.y+i*2])
-        moves.push([this.x-i, this.y+i*2])
-        }
-
-        return this.ruleCheck(moves)
-    }
-}
-
-class King extends PNK {
-    get unchecked_moves() {
-        let start_moves = []
-        
-        for (let i = -1; i < 2; i = i + 2){
-            start_moves.push([this.x+i, this.y])
-            start_moves.push([this.x, this.y+i])
-            start_moves.push([this.x+i, this.y+i])
-            start_moves.push([this.x+i, this.y-i])
-        }
-        return this.ruleCheck(start_moves)
-    }
-    get castle_r() {
-        if (this.first_move) {
-            let om = "wow"
-            if (this.color == "w") {
-                om = opponent_moves(b, "b")
-            }
-            else {
-                om = opponent_moves(b, "w")
-            }
-            let r_checked = false
-            let king_y = 8
-            if(this.color == "w") {
-                king_y = 1
-            }//problem
-            if(this.x == 5) {
-                for (let i = 0; i < om.length; i++) {
-                    if(om[i][1] == king_y && (om[i][0] == 6 || om[i][0] == 7)) {
-                        r_checked = true
-                    }
-                }
-                
-                if (b[8][king_y].first_move && b[7][king_y] == "O" && b[6][king_y] == "O" && !r_checked) {
-                    return [this.x+2, this.y, "rc"]
-                }
-            }
-            
-            
-        }
-    }
-    get castle_l() {
-        
-        if(this.first_move) {
-            let om = "wow"
-            if (this.color == "w") {
-                om = opponent_moves(b, "b")
-            }
-            else {
-                om = opponent_moves(b, "w")
-            }
-            let l_checked = false
-            let king_y = 8
-            if(this.color == "w") {
-                king_y = 1
-            }
-            if(this.x == 5) {
-                for (let i = 0; i < om.length; i++) {
-                    if(om[i][1] == king_y && (om[i][0] == 4 || om[i][0] == 3)) {
-                        l_checked = true
-                    }
-                }
-                if (b[1][king_y].first_move && b[2][king_y] == "O" && b[3][king_y] == "O" && b[4][king_y] == "O" && !l_checked) {
-                    return [this.x-2, this.y, "lc"]
-                }
-            }
-        }
-        
-    }
-    get moves() {
-        
-        let moves = []
-        moves = super.moves
-        if(this.castle_r != undefined) {
-            moves.push(this.castle_r)
-        }
-        if(this.castle_l != undefined) {
-            moves.push(this.castle_l)
-        }
-        return moves
-    }
-    move(x, y) {
-        let king_y = 8
-        if(this.color == "w") king_y = 1
-            
-        let first_question_mark = this.first_move
-        super.move(x,y)
-        if(this.x == x) {
-            if (first_question_mark && x == 7) {
-                swap_pieces(8,king_y,6,king_y)
-                b[6][king_y].first_move = false
-                console.log("King side castle")
-            }
-            else if (first_question_mark && x == 3) {
-                b[4][king_y] = b[1][king_y]
-                b[1][king_y] = "O"
-                update_xy(4,king_y)
-                b[4][king_y].first_move = false
-                console.log("Queen side castle")
-
-            }
-        }
-    }
-}
-
-class RBQ extends Piece { //Rook, Bishop, Queen
-    get unchecked_moves() {
-        let moves = []
-        
-        if(this.constructor.name == "Rook" || this.constructor.name == "Queen") {
-            for (let i = 0; i < 4; i++) {
-                let x = this.x
-                let y = this.y
-                for (let j = 1; j < 9; j++) {
-                    if(i == 0) {
-                        x = this.x - j
-                    }
-                    else if (i == 1) {
-                        x = this.x + j
-                    }
-                    else if (i == 2) {
-                        y = this.y - j
-                    }
-                    else {
-                        y = this.y + j
-                    }
-        
-                    if(x > 8 || x < 1 || y > 8 || y < 1 || b[x][y].color == this.color) {
-                        break
-                    }
-                    else if (b[x][y].color != this.color && b[x][y].color != undefined) {
-                        moves.push([x, y])
-                        break
-                    }
-                    else {
-                        moves.push([x, y])
-                    }
-                }
-            }
-        }
-        if(this.constructor.name == "Bishop" || this.constructor.name == "Queen") {
-            for (let i = 0; i < 4; i++) {
-                let x = this.x
-                let y = this.y
-                for (let j = 1; j < 9; j++) {
-                    if(i == 0) {
-                        x = this.x - j
-                        y = this.y - j
-                    }
-                    else if (i == 1) {
-                        x = this.x + j
-                        y = this.y + j
-
-                    }
-                    else if (i == 2) {
-                        x = this.x + j
-                        y = this.y - j
-                    }
-                    else {
-                        x = this.x - j
-                        y = this.y + j
-                    }
-        
-                    if(x > 8 || x < 1 || y > 8 || y < 1 || b[x][y].color == this.color) {
-                        break
-                    }
-                    else if (b[x][y].color != this.color && b[x][y].color != undefined) {
-                        moves.push([x, y])
-                        break
-                    }
-                    else {
-                        moves.push([x, y])
-                    }
-                }
-            }
-        }   
-        return moves
-    }   
-}
-
-
-class Rook extends RBQ {
-}
-
-class Bishop extends RBQ {
-}
-
-class Queen extends RBQ {
-}
-
-function update_all() {
-    for (let i = 0; i < 9; i++) {
-        for (let j = 0; j < 9; j++) {
-            update_xy(i,j)
-        }
-    }
-}
-
-
-code = "rnbqkbn1/pppppppp/8/8/8/8/PPPPPpPP/RNBQK2R"
-
-
-function FEN_generate(code, b) {
-    clear_b()
-    let y = 8
-    let x = 1
-    for (let i = 0; i < code.length; i++) {
-        if (code.charAt(i) == "/") {
-            y -= 1
-            x = 1
-        }
-        else {
-            if (isNaN(code.charAt(i) / 2)) {
-                if(code.charAt(i) == "r") b[x][y] = new Rook("b")
-                else if (code.charAt(i) == "n") b[x][y] = new Knight("b")
-                else if (code.charAt(i) == "b") b[x][y] = new Bishop("b")
-                else if (code.charAt(i) == "q") b[x][y] = new Queen("b")
-                else if (code.charAt(i) == "k") b[x][y] = new King("b")
-                else if (code.charAt(i) == "p") b[x][y] = new Pawn("b")
-
-                else if (code.charAt(i) == "R") b[x][y] = new Rook()
-                else if (code.charAt(i) == "N") b[x][y] = new Knight()
-                else if (code.charAt(i) == "B") b[x][y] = new Bishop()
-                else if (code.charAt(i) == "Q") b[x][y] = new Queen()
-                else if (code.charAt(i) == "K") b[x][y] = new King()
-                else if (code.charAt(i) == "P") b[x][y] = new Pawn()
-
-                x += 1
-            }
-            else {
-                x += parseInt(code.charAt(i))
-            }
-        }
-
-    }
-    update_all()
-}
-
-
-
-
-function update_xy(x,y) {
-    b[x][y].x = x
-    b[x][y].y = y
-}
-
-function opponent_moves(b, color = "none") { //color er lavet hvis man vil finde ud fra farve og ikke tur
-    let their_moves = []
-
-    if (color == "none") {
-        for (let i = 0; i < b.length; i++) {
-            for (let j = 0; j < b[0].length; j++) {
-                if (b[i][j] == "O") continue
-                else if (b[i][j].color == "w" && ap == 1) continue
-                else if (b[i][j].color == "b" && ap == -1) continue
-                else {
-                    their_moves = their_moves.concat(b[i][j].unchecked_moves)
-                }
-            }
-            
-        }
-    }
-    if (color == "b") {
-        for (let i = 0; i < b.length; i++) {
-            for (let j = 0; j < b[0].length; j++) {
-                if (b[i][j] == "O") continue
-                else if (b[i][j].color == "w") continue
-                else {
-                    their_moves = their_moves.concat(b[i][j].unchecked_moves)
-                }
-            }
-            
-        }
-    }
-    if (color == "w") {
-        for (let i = 0; i < b.length; i++) {
-            for (let j = 0; j < b[0].length; j++) {
-                if (b[i][j] == "O") continue
-                else if (b[i][j].color == "b") continue
-                else {
-                    their_moves = their_moves.concat(b[i][j].unchecked_moves)
-                }
-            }
-            
-        }
-    }
-
-        
-    
-    return their_moves
-}
-
-
-
-
-function king_position(b, color) {
-    for (let i = 0; i < 100; i++) {
-        let x = i % 10
-        let y = Math.floor(i/10)
-        
-            if (color == "w" && b[x][y].abbreviation == "wk") {
-                return [x,y]
-            }
-        
-        if (color == "b" && b[x][y].abbreviation == "bk") {
-            return [x,y]
-        }
-        
-        
-    }
-}
-
-function insert_piece(x, y, piece) {
-    b[x][y] = piece
-    update_xy(x,y)
     update()
 }
 
+//Turns board editor mode on/off
+edit = false
+function get_edit() {
+    if (edit) edit = false
+    else edit = true
+}
 
+//Piece values
+v = {
+    P: 1,
+    N: 2,
+    B: 3,
+    R: 4,
+    Q: 5,
+    K: 6,
+    k: -6,
+    q: -5,
+    r: -4,
+    b: -3,
+    n: -2,
+    p: -1
+}
 
+//Gør brættet rent
+function clear_board() {
+    for (let i = 0; i < 120; i++) {
+        if(i < 20 || i > 100 || i % 10 == 9 || i % 10 == 0) {
+            b[i] = 7
+            f[i] = 7
+        }
+        else {
+            b[i] = 0
+            f[i] = 0
+        }
+    }
+}
 
-mouse_x = 0
-mouse_y = 0
-down_x = 0
-down_y = 0
-mouse_is_down = false
-var active_piece
-var active_tile_color
-p = 0
+//Creates position from FEN-string
+function FEN_generate(code) {
+    mm = []
+    clear_board()
+    let x = 1
+    let y = 9
+    for (let i = 0; i < code.length; i++) {
+        if (code.charAt(i) == " ") {
+            break
+        }
+        if (code.charAt(i) == "/") {
+            y -= 1
+            x = 1
+            continue
+        }
+        else if (isNaN(code.charAt(i))) {
+            if(code.charAt(i).toUpperCase() == code.charAt(i)) {
+                b[y*10+x] = v[code.charAt(i)]
+            }
+            else {
+                b[y*10+x] = v[code.charAt(i)]
+            }
+            if(b[y*10+x] == 1 && y*10+x >= 31 && y*10+x <= 38) {
+                f[y*10+x] = 1
+            }
+            else if (b[y*10+x] == -1 && y*10+x >= 81 && y*10+x <= 88) {
+                f[y*10+x] = 1
+            }
+            x += 1
+        }
+        else x += parseInt(code.charAt(i))
+    }
+
+    //Decides if king has moved
+    for (let i = -1; i < 2; i = i + 2) {
+        if (b[60-35*i] == 6*i) {
+            f[60-35*i] = 1
+        }
+    }
+
+    //Decides if rooks have moved
+    for (let i = -1; i < 2; i = i + 2) {
+        if (b[56-35*i] == 4*i) {
+            f[56-35*i] = 1
+        }
+        if (b[63-35*i] == 4*i) {
+            f[63-35*i] = 1
+        }
+    }
+
+    //Updates the board
+    update()
+}
+
+var moving_square
+var computer_playing = false
 
 function update() {
-    
+    //Updates canvas boundary
+    canvas_boundary = c.getBoundingClientRect()
 
-    for (let i = 0; i < 9*8; i++) {
-        let x = i % 9
-        let y = Math.floor(i/9)
-        if (i%2 == 1) ctx.fillStyle = "brown"
-        else ctx.fillStyle = "white"
+    //Draws Chess board
+    ctx.drawImage(board,0,0, h, h)
+
+    //Draws Pieces
+    for (let i = 0; i < 120; i++) {
+        if (b[i] != 7 && b[i] != 0) {
+            let x = i % 10
+            let y = Math.floor(i/10)
+            if(i != moving_square)
+            if (Math.sign(b[i]) == 1) {
+                ctx.drawImage(images[b[i]], x*ts - ts, h - y*ts + ts, ts, ts)
+                continue
+            }
+            else {
+                ctx.drawImage(images[images.length + b[i]], x*ts - ts, h - y*ts + ts, ts, ts)
+                continue
+            }
+        }
+    }
+
+    //Dev visuals
+    ctx.fillStyle = "white"
+    ctx.beginPath();
+    ctx.rect(h, 200,  h, h);
+    ctx.fill();
+    for (let i = 0; i < f.length; i++) {
+        let x = b_to_x(i)
+        let y = b_to_y(i)
+        if(b[i] == 7) continue
+        if (!b[i]) ctx.fillStyle = "green"
+        else ctx.fillStyle = "yellow"
+        if (f[i] == 1) ctx.fillStyle = "purple"
         ctx.beginPath();
-        ctx.rect(x*ts, y*ts, ts, ts);
+        ctx.rect(h+x*0.2,300+y*0.2,h*0.02, h*0.02);
         ctx.fill();
     }
-
-    for (let i = 0; i < 9*8; i++) {
-        let x = i % 9
-        let y = Math.floor(i/9)
-        if(b[x+1][y+1] != "O") {
-            ctx.drawImage(b[x+1][y+1].image, b[x+1][y+1].x*ts - ts, h+ts-b[x+1][y+1].y*ts - ts, ts, ts)
-        }                
+    ctx.font = "15px Arial";
+    ctx.fillStyle = "blue"
+    for (let i = 0; i < mm.length; i++) {
+        ctx.fillText(mm[mm.length-1-i], h*1.3, h*0.6+i*15)
     }
-    
+
+    //Displays Checkmate or Stalemate
+    if (!all_legal_moves(player_to_move()).length) {
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "blue"
+        if (t_is_hit(b.indexOf(6*player_to_move()), -player_to_move())) {
+            let word
+            if(player_to_move() == 1) word = "Black"
+            else word = "White"
+            ctx.fillText(word + " wins!", h/2-50, h/2-10);
+        }
+        else ctx.fillText("Stalemate!", h/2-50, h/2-10);
+    }
 }
 
+//Updates board when window has loaded
 window.onload = function() {update()}
-    
 
+//Each type of piece's inherent move properties
+move_properties = {
+    1: function(t, color) {return P_moves(t, color)},
+    2: function(t, color) {return NK_moves(t, [19, 21, 8, 12, -8, -12, -19, -21], color)},
+    3: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11], color)},
+    4: function(t, color) {return BRQ_moves(t, [10, -1, 1, -10], color)},
+    5: function(t, color) {return BRQ_moves(t, [9, 11, -9, -11, 10, -1, 1, -10], color)},
+    6: function(t, color) {return NK_moves(t, [9, 10, 11, -1, 1, -9, -10, -11], color)},
+}
 
-function mousemove(event) {
-    
-    
-    mouse_x = Math.ceil((event.x - canvas_boundary.left)/ts) 
-    mouse_y = 8 - Math.floor((event.y - canvas_boundary.top)/ts)
+//Knight and King moves
+function NK_moves(t, moves, color) {
+    let unchecked_moves = []
+    moves.forEach(dir => {
+        let move = t + dir
+        if(b[move] != 7 && (b[move] == 0 || Math.sign(b[move]) != color)) {
+            unchecked_moves.push(move)
+        }
+    })
+    return unchecked_moves
+}
 
-    if (mouse_is_down && active_piece != "O") {
-        update()
-        if(b[down_x][down_y] != "O") {
-            for (let i = 0; i < active_piece_moves.length; i++) {
-                ctx.fillStyle = "gray"
-                ctx.beginPath();
-                ctx.arc(active_piece_moves[i][0]*ts - ts/2, h - active_piece_moves[i][1]*ts + ts/2, ts/ 5, 0, 7);
-                ctx.fill();
+//Pawn moves
+function P_moves(t, color) {
+    let unchecked_moves = []
+    for (let i = -1; i < 2; i += 2) {
+        if(b[t+(10+i)*color] && Math.sign(b[t+(10+i)*color]) != color && b[t+(10+i)*color] != 7) {
+            unchecked_moves.push(t+(10+i)*color)
+        }
+    }
+    if(!b[t+(10*color)]) {
+        unchecked_moves.push(t+(10*color))
+        if (f[t] && !b[t+(20*color)]) {
+            unchecked_moves.push(t+(20*color))
+        }
+    }
+    return unchecked_moves
+}
+
+//Bishop, Rook and Queen moves
+function BRQ_moves(t, directions, color) {
+    let unchecked_moves = []
+    directions.forEach(dir => {
+        let i = 0
+        while (true) {
+            i += 1
+            let dir_t = t + i*dir
+            if(b[dir_t] == 0) {
+                unchecked_moves.push(dir_t)
+                continue
+            } 
+            else if (b[dir_t] == 7 || Math.sign(b[dir_t]) == color) break
+            else if (Math.sign(b[dir_t]) != color) {
+                unchecked_moves.push(dir_t)
+                break
             }
         }
-        
-        if (down_x % 2 == 1) p = 1
-        else p = 0
-        if ((down_y + p) % 2 == 1) ctx.fillStyle = "white"
-        else ctx.fillStyle = "brown"
-    
-        ctx.beginPath();
-        ctx.rect((down_x-1)*ts, (8-down_y)*ts, ts, ts);
-        ctx.fill();
-        ctx.drawImage(b[down_x][down_y].image, event.x - canvas_boundary.left - ts/2, event.y - canvas_boundary.top - ts/2, ts, ts)
-    }
+    })
+    return unchecked_moves
 }
-function mousedown() {
-    if ((b[mouse_x][mouse_y].color == "w") || (ap == -1 && b[mouse_x][mouse_y].color == "b")) {
-        console.log(b[mouse_x][mouse_y])
+
+//Pseudo moves is a piece's moves without consideration for discovered checks
+function pseudo_moves(t, type = Math.abs(b[t]), color = Math.sign(b[t])) {
+    //Gets move properties from move_properties
+    return move_properties[type](t, color)
+}
+
+//Lists all pseudo moves
+function all_pseudo_moves(color) {
+    let total_moves = []
+    for (let i = 0; i < 120; i++) {
+        let piece = b[i]
+        if (piece != 0 && piece != 7 && Math.sign(piece) == color) {
+            total_moves = total_moves.concat(pseudo_moves(i))
+        }
     }
-    if((ap == 1 && b[mouse_x][mouse_y].color == "w") || ((ap == -1 && b[mouse_x][mouse_y].color == "b"))) {
+    return total_moves
+}
 
-    
-        down_x = mouse_x
-        down_y = mouse_y
-        active_piece = b[down_x][down_y]
-        active_piece_moves = active_piece.moves //THIS makes the program 10x faster
-        mouse_is_down = true
-        
+//Determines if a tile is hit by a color or not
+function t_is_hit(t, color) {
+    for (let i = 0; i < 120; i++) {
+        let piece = b[i]
+        if (piece != 0 && piece != 7 && Math.sign(piece) == color) {
+            if(pseudo_moves(i).includes(t)) return 1
+        }
+    }
+    return 0
+}
 
-        if(active_piece != "O") {
-            for (let i = 0; i < active_piece_moves.length; i++) {
-                ctx.fillStyle = "gray"
-                ctx.beginPath();
-                ctx.arc(active_piece_moves[i][0]*ts - ts/2, h - active_piece_moves[i][1]*ts + ts/2, ts/ 5, 0, 7);
-                ctx.fill();
+//All moves of a piece, taking discovered checks into account
+function checked_moves(t) {
+    let moves = pseudo_moves(t)
+    let color = Math.sign(b[t])
+    let illegal_moves = []
+    let value = b[t]
+    moves.forEach(move => {
+        let temp = b[move]
+        b[move] = value
+        b[t] = 0
+        if (t_is_hit(b.indexOf(6*color), color*-1)) {
+            illegal_moves.push(move)
+            b[move] = temp
+            b[t] = value
+            return
+        }
+        b[move] = temp
+        b[t] = value
+    })
+    let true_moves = []
+    moves.filter(move => !illegal_moves.includes(move)).forEach(move => {
+        if (Math.abs(b[t]) == 1 && (Math.floor(move/10)) == 5.5 + 3.5*color) {
+            for (let i = 2; i <= 5; i++) {
+                true_moves.push([t, move, b[t], b[move], f[t], i*color, f[move]])
             }
         }
-    }
-}
+        else true_moves.push([t, move, b[t], b[move], f[t], 0, f[move]])
+    })
 
-function mouseup() {
-    if(mouse_is_down) {
-        console.log("up")
-        mouse_is_down = false
-        if (active_piece != "O" && (down_x != mouse_x || down_y != mouse_y)) {
-            b[down_x][down_y].move(mouse_x, mouse_y)
-        }
-        update()
-    }
-    
-}
-
-
-
-
-function find_legal_moves(c) {
-    let legal_moves = []
-    if(c == "w") {
-        for (let i = 1; i <= 8; i++) {
-            for (let j = 1; j <= 8; j++) {
-                if (b[i][j] != "O") {
-                    if(b[i][j].color == "w") {
-                        for (let p = 0; p < b[i][j].moves.length; p++) {
-                            if (b[i][j].moves[p] != 0) {
-                                legal_moves.push([i, j, b[i][j].moves[p][0], b[i][j].moves[p][1], b[i][j].moves[p][2], b[i][j].moves[p][3]])
-                                
-                            }
-                        }
+    //En pessant
+    if (Math.abs(value) == 1) {
+        if (mm.length) {
+            if (Math.floor(mm[mm.length - 1][1]/10) == Math.floor(t/10) && 
+mm[mm.length - 1][0] == mm[mm.length - 1][1] + 20*color && mm[mm.length - 1][2] == color*-1) {
+                if((mm[mm.length - 1][0] % 10) - 1 == t % 10) {
+                    b[t+10*color+1] = b[t]
+                    b[t] = 0
+                    b[t+1] = 0
+                    if(!t_is_hit(b.indexOf(6*color), color*-1)) {
+                        true_moves.push([t, t+10*color+1, color, 0, f[t], +6])
                     }
-
+                    b[t] = b[t+10*color+1]
+                    b[t+10*color+1] = 0
+                    b[t+1] = color*-1
+                }
+                else if((mm[mm.length - 1][0] % 10) + 1 == t % 10) {
+                    b[t+10*color-1] = b[t]
+                    b[t] = 0
+                    b[t-1] = 0
+                    if(!t_is_hit(b.indexOf(6*color), color*-1)) {
+                        true_moves.push([t, t+10*color-1, color, 0, f[t], -6])
+                    }
+                    b[t] = b[t+10*color-1]
+                    b[t+10*color-1] = 0
+                    b[t-1] = color*-1
                 }
             }
-            
         }
     }
+
+    //Castling
+    if(b.indexOf(6*color) == t && f[t] && !t_is_hit(t, color*-1) && b[t+10*color] != color*-1) {
+        if (f[t+3] && !b[t+1] && !b[t+2]) {
+            if (!t_is_hit(t+1, color*-1) && !t_is_hit(t+2, color*-1) && b[t+3+10*color] != color*-1) {
+                true_moves.push([t, t+2, b[t], b[t+2], f[t], 1, 0])
+            }
+        }
+        if (f[t-4] && !b[t-1] && !b[t-2] && !b[t-3]) {
+            if (!t_is_hit(t-1, color*-1) && !t_is_hit(t-2, color*-1) && b[t-3+10*color] != color*-1) {
+                true_moves.push([t, t-2, b[t], b[t-2], f[t], -1, 0]) 
+            }
+        }
+    } 
+    return true_moves
+}
+
+//For moving pieces
+function move(m) {
+    mm.push(m)
+    //normal move
+    if(!m[5]) {
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        f[m[0]] = 0
+        f[m[1]] = 0
+        return
+    }
+    //Right castle
+    if (m[5] == 1) {
+        b[m[0]+1] = b[m[0]+3]
+        b[m[0]+3] = 0
+        f[m[0]+1] = 0
+        f[m[0]+3] = 0
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        f[m[1]] = 0
+        f[m[0]] = 0
+        return
+    }
+    //Left castle
+    if (m[5] == -1) {
+        b[m[0]-1] = b[m[0]-4]
+        b[m[0]-4] = 0
+        f[m[0]-1] = 0
+        f[m[0]-4] = 0
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        f[m[1]] = 0
+        f[m[0]] = 0
+        return
+    }
+    //En Pessant
+    if(Math.abs(m[5]) == 6) {
+        b[m[1]] = b[m[0]]
+        b[m[0]] = 0
+        b[m[0]+Math.sign(m[5])] = 0
+        return
+    }
+    //Promotion
+    b[m[1]] = m[5]
+    b[m[0]] = 0
+    f[m[1]] = 0
+    f[m[0]] = 0
+}
+
+//Converts mouse positions to tile on board
+function mouse_to_b(mouse_x, mouse_y) {
+    return Math.ceil((h-(mouse_y - canvas_boundary.top))/ts)*10 + Math.ceil((mouse_x - canvas_boundary.left)/ts) + 10
+}
+
+//Converts tile to x coordinate
+function b_to_x(t) {
+    return (t % 10)*ts
+}
+
+//Converts tile to y coordinate
+function b_to_y(t) {
+    return h-Math.floor(t/10)*ts
+}
+
+//Lists all legal moves
+function all_legal_moves(color) {
+    let all_moves = []
+    for (let i = 0; i < b.length; i++) {
+        let tile = b[i]
+        if (tile && tile != 7 && Math.sign(tile) == color) {
+            all_moves = all_moves.concat(checked_moves(i))
+        }
+    }
+    return all_moves
+}
+
+//Undoes the last move played
+function unmake_lm() {
+    let lm = mm[mm.length-1] //last move
+    b[lm[0]] = lm[2]
+    b[lm[1]] = lm[3]
+    f[lm[0]] = lm[4]
+    f[lm[1]] = lm[6]
+    if(Math.abs(lm[5]) == 1) {
+        b[Math.floor(lm[0]/10)*10+4.5+3.5*lm[5]] = b[lm[0]+lm[5]]
+        b[lm[0]+lm[5]] = 0
+        f[Math.floor(lm[0]/10)*10+4.5+3.5*lm[5]] = 1
+    }
+    else if(Math.abs(lm[5]) == 6) {
+        b[lm[0]+Math.sign(lm[5])] = lm[2]*-1
+    }
+    mm.pop()
+}
+
+//Determines what player it is to move
+function player_to_move() {
+    let player_to_move
+    if (!mm.length) player_to_move = 1
+    else if(Math.sign(mm[mm.length-1][2]) == 1) player_to_move = -1
+    else player_to_move = 1
+    return player_to_move
+}
+
+//Interactivity variables
+var mouse_down = false
+var will_update = true
+var mouse_x
+var mouse_y
+var down_x
+var down_y
+var promotion_x
+var promotion_y
+var xy
+var down_xy
+
+//Converts tile number to chess notation
+function tile_to_letternumber(tile) {
+    return String.fromCharCode(96+(tile % 10)) + (Math.floor(tile/10)-1).toString()
+}
+
+//What happens when the mouse moves
+function mousemove (event) {
+    mouse_x = Math.floor((event.x - canvas_boundary.left)/ts)*ts 
+    mouse_y = Math.floor((event.y - canvas_boundary.top)/ts)*ts
+    if(will_update) {
+        xy = mouse_to_b(event.x, event.y)
+        update()
+        if(mouse_down) {
+            for (let i = 0; i < checked_moves(down_xy).length; i++) {
+                ctx.fillStyle = "gray"
+                ctx.beginPath();
+                ctx.arc(b_to_x(checked_moves(down_xy)[i][1]) - ts/2, b_to_y(checked_moves(down_xy)[i][1]) + 3*ts/2, ts/ 5, 0, 7);
+                ctx.fill();
+            }
+            moving_square = down_xy
+            ctx.drawImage(images.slice(b[down_xy])[0],event.x - canvas_boundary.left - ts/2,event.y - canvas_boundary.top - ts/2,ts,ts)
+        }
+        else {
+            moving_square = 100
+            update()
+        }
+    }
+    if (event.x-canvas_boundary.left < h && document.getElementById('dev_buttons').style.display == 'block') {
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "blue"
+        ctx.fillText(tile_to_letternumber(xy), event.x-canvas_boundary.left - 33, event.y - canvas_boundary.top);
+    }
+}
+
+//What happens when mouse is pressed
+function mousedown (event) {
+    if (will_update) {
+        down_x = mouse_x
+        down_y = mouse_y
+        down_xy = mouse_to_b(event.x,event.y)
+        
+        if(b[down_xy] && b[down_xy] != 7 && Math.sign(b[down_xy]) == player_to_move()) mouse_down = true
+    }
     else {
-        for (let i = 1; i <= 8; i++) {
-            for (let j = 1; j <= 8; j++) {
-                if (b[i][j] != "O") {
-                    if(b[i][j].color == "b" && b[i][j].moves.length > 0) {
-                        for (let p = 0; p < b[i][j].moves.length; p++) {
-                            legal_moves.push([i, j, b[i][j].moves[p][0], b[i][j].moves[p][1], b[i][j].moves[p][2], b[i][j].moves[p][3]])
+        let color = Math.sign(b[down_xy])
+        if(mouse_x == promotion_x) {
+            for (let i = 0; i < 4; i++) {
+                if (mouse_y == promotion_y + ts*color*i) {
+                    move([down_xy, xy, b[down_xy], b[xy], f[down_xy], (5-i)*color, f[xy]])
+                    if(computer_playing && player_to_move() == -1) computer_move(document.getElementById('Average_time').value)
+                }
+            }
+        }
+        will_update = true
+    }
+    if(edit) {
+        b[xy] = parseInt(document.getElementById('Edit_piece').value)
+        f[xy] = 0
+    }
+    update()
+}
+
+//What happens when mouse button is lifted
+function mouseup () {
+    if(will_update) {
+        if(mouse_down) {
+            if(xy != down_xy) {
+                let color = Math.sign(b[down_xy])
+                if (Math.abs(b[down_xy]) == 1 && Math.floor(xy/10) == 5.5+3.5*color) {
+                    for (let i = 0; i < checked_moves(down_xy).length; i++) {
+                        if (checked_moves(down_xy)[i].includes(xy)) {
+                            break
+                        }
+                        if (i == checked_moves(down_xy).length - 1) {
+                            mouse_down = false
+                            return
+                        }
+                    }
+                    will_update = false
+                    promotion_y = mouse_y
+                    promotion_x = mouse_x
+                    if(color == 1) {
+                        ctx.fillStyle = "grey"
+                        ctx.beginPath();
+                        ctx.rect(mouse_x, mouse_y, ts, ts*4)
+                        ctx.fill();
+                        for (let i = 2; i < 6; i++) {
+                            ctx.drawImage(images[i], mouse_x, (5-i)*ts, ts, ts)
+                        }
+                    }
+                    else {
+                        ctx.fillStyle = "grey"
+                        ctx.beginPath();
+                        ctx.rect(mouse_x, mouse_y-ts*3, ts, ts*4)
+                        ctx.fill();
+                        for (let i = 2; i < 6; i++) {
+                            ctx.drawImage(images[images.length-i], mouse_x, (5-i*color)*ts-3*ts, ts, ts)
                             
                         }
                     }
-
                 }
-            }
-            
-        }
-        
-    }
-    return legal_moves
-}
-
-/*
-function your_moves(b) {
-    let our_moves = []
-        for (let i = 0; i < b.length; i++) {
-            for (let j = 0; j < b[0].length; j++) {
-                if (b[i][j] == "O") continue
-                else if (b[i][j].color == "w" && ap == -1) continue
-                else if (b[i][j].color == "b" && ap == 1) continue
                 else {
-                    our_moves = our_moves.concat(b[i][j].unchecked_moves)
+                    for (let i = 0; i < checked_moves(down_xy).length; i++) {
+                        if (checked_moves(down_xy)[i][1] == xy) {
+                            move(checked_moves(down_xy)[i])
+                            mouse_down = false
+                            if(computer_playing && player_to_move() == -1) computer_move(document.getElementById('Average_time').value)
+                            return
+                        }
+                    }
+                    console.log("Illegal move!")
                 }
+            if(computer_playing && player_to_move() == -1) computer_move(document.getElementById('Average_time').value)
             }
-            
         }
-    
-    return our_moves
-}*/
-
-numPositions = 0
-
-b = clear_b()
-FEN_generate(code, b)
-
-
-function swap_pieces(x1,y1,x2,y2) {
-    temp = b[x2][y2]
-    b[x2][y2] = b[x1][y1]
-    b[x1][y1] = temp
-    update_xy(x2,y2)
-    update_xy(x1,y1)
+        mouse_down = false
+    }
 }
 
+//Finds all possible board states depth moves into the game
 function movegen(depth) {
-        if (depth == 0) {
-            return 1
+    if (depth == 0) return 1
+    let legal_moves
+    if(!mm.length) legal_moves = all_legal_moves(1)
+    else legal_moves = all_legal_moves(Math.sign(mm[mm.length-1][2])*-1)
+    let numPositions = 0
+        legal_moves.forEach(m => {
+            move(m)
+            numPositions += movegen(depth-1)
+            unmake_lm()
+        })
+    return numPositions
+}
+
+//Gets value of any piece
+function get_piece_value(piece) {
+    if(piece > 0) {
+        if(piece == 1) return piece
+        else if(piece == 2 || piece == 3) return 3
+        else if (piece == 4) return 5
+        else return 9
+    }        
+    else {
+        if(piece == -1) return piece
+        else if(piece == -2 || piece == -3) return -3
+        else if (piece == -4) return -5
+        else return -9
+    }
+}
+
+//Evaluates position based on certain criteria
+function evaluate() {
+    let evaluation = 0
+    for (let i = 0; i < f.length; i++) {
+        let piece = b[i]
+        if (piece != 7 && piece) {
+            //Points for every piece on the board
+            evaluation += get_piece_value(piece)*100
+            
+            //It's good if minor pieces reach many squares
+            if (Math.abs(piece) < 5) {
+                evaluation += pseudo_moves(i).length*Math.sign(piece)
+            }
+        }
+    }
+    return evaluation/100
+}
+
+//Sorts moves to get through minimax faster
+function all_sorted_moves(color) {
+    let moves = all_legal_moves(color)
+    moves.forEach(m => {
+        let score = 0
+
+        //Score baseret på capture værdi minus piece værdi
+        if (m[3]) {
+            score = Math.abs(10*get_piece_value(b[m[1]])) - Math.abs(m[2])
         }
 
-        let legal_moves = 0
-        if(depth % 2 == 0) {
-            legal_moves = find_legal_moves("w")
+        //Promotion to queen is good
+        if(Math.abs(m[5]) == 5) {
+            score += 9*color
+        }
+
+        //Minus points if opponent can capture your piece
+        if(all_pseudo_moves(color*-1).includes(m[1])) {
+            score -= Math.abs(get_piece_value(m[2]))
+        }
+        m[7] = score
+    })
+    moves = moves.sort(function (a, b) {
+        if(a[7] === b[7]) return 0
+        else return (a[7] > b[7]) ? -1 : 1
+    })
+    return moves
+}
+
+//Finds the best possible evaluation on depth. Alpha-beta pruning is utilized
+function minimax(depth, alpha, beta, maximizing_player) {
+    if (depth == 0) return evaluate()
+    if((maximizing_player == 1 || maximizing_player == -1) && !all_legal_moves(maximizing_player).length) {
+        if (t_is_hit(b.indexOf(6*maximizing_player), maximizing_player*-1)) {
+            return -Infinity*maximizing_player
+        }
+        return 0
+    }
+    let moves = all_sorted_moves(maximizing_player)
+    if (maximizing_player == 1) {
+        for (let i = 0; i < moves.length; i++) {
+            move(moves[i])
+            evaluation = minimax(depth -1, alpha, beta, -1)
+            unmake_lm()
+            alpha = Math.max(alpha, evaluation)
+            if (beta <= alpha) break
+        }
+        return alpha
+    }
+    else if (maximizing_player == -1) {
+        for (let i = 0; i < moves.length; i++) {
+            move(moves[i])
+            evaluation = minimax(depth -1, alpha, beta, 1)
+            unmake_lm()
+            beta = Math.min(beta, evaluation)
+            if(beta <= alpha) break
+        }
+        return beta
+    }
+}
+
+//Finds best minimax from all current moves
+function best_move(depth, color) {
+    let current_best_evaluation = Infinity*color*-1
+    let moves = all_legal_moves(color)
+    if(!moves.length) return
+    if (moves.length == 1) {
+        return moves[0]
+    }
+    let current_best_move = 0
+    for (let i = 0; i < moves.length; i++) {
+        move(moves[i])
+        let test_evaluation = minimax(depth-1, -Infinity, Infinity, player_to_move())
+        if(color == 1) {
+            if (test_evaluation > current_best_evaluation) {
+                current_best_evaluation = test_evaluation
+                current_best_move = i
+            }
         }
         else {
-            legal_moves = find_legal_moves("b") 
+            if (test_evaluation < current_best_evaluation) {
+                current_best_evaluation = test_evaluation
+                current_best_move = i
+            }
         }
-
-        let numPositions = 0
-        console.log(legal_moves)
-        console.log(find_legal_moves("b"))
-
-        let first_ques = false
-        for (let i = 0; i < legal_moves.length; i++) {
-            if(b[legal_moves[i][0]][legal_moves[i][1]].first_move == true) {
-                first_ques = true
-            }
-            else {
-                first_ques = false
-            }
-            b[legal_moves[i][0]][legal_moves[i][1]].move(legal_moves[i][2], legal_moves[i][3])
-            
-            
-            numPositions += movegen(depth-1)
-            console.log("hi")
-            //undo
-            swap_pieces(legal_moves[i][2], legal_moves[i][3], legal_moves[i][0], legal_moves[i][1])
-
-            /*if (ap == 1) {
-                ap = -1
-            }
-            else {
-                ap = 1
-            }*/
-            if (first_ques == true) {
-                b[legal_moves[i][0]][legal_moves[i][1]].first_move = true
-            }
-            if (legal_moves[i][4] != undefined) {
-                if (legal_moves[i][4] == "x") {
-                    b[legal_moves[i][2]][legal_moves[i][3]] = legal_moves[i][5]
-                    //evt fix et kommende problem med first move
-                }
-                else if (legal_moves[i][4] == "rc") {
-    
-                    swap_pieces(6,legal_moves[i][1],8,legal_moves[i][1])
-                    b[8][legal_moves[i][1]].first_move = true
-    
-                }
-                else if (legal_moves[i][4] == "lc") {
-                    swap_pieces(4,legal_moves[i][1],1,legal_moves[i][1])
-                    b[1][legal_moves[i][1]].first_move = true
-                }
-            }
-            
-            
-            
-            //der bliver også et problem med at reverte pawns second move
-        }
-        return numPositions
-    
-    
+        unmake_lm()        
+    }
+    return moves[current_best_move]
 }
 
-console.log(movegen(1))
-//console.log(movegen(2))
-//undo
-console.log(find_legal_moves("w"))
+//Finds best possible move within the timeframe
+function best_in_time (color, time = 1) {
+    let t0 = Date.now()
+    let moves = all_legal_moves(color)
+    let depth = 1
+    let current_best_move = 0
+    if(!moves.length) return
+    if(moves.length == 1) {
+        current_best_move = moves[0]
+    }
+    else {
+        while (Date.now() - t0 < time*1000/(moves.length*0.3)) {
+            current_best_move = best_move(depth, color)
+            console.log(current_best_move)
+            depth += 1
+        }
+    }
+
+    //Shown in dev visuals
+    ctx.fillStyle = "white"
+    ctx.beginPath();
+    ctx.rect(h, 0,  h, h);
+    ctx.fill();
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "blue"
+    ctx.fillText("Depth reached: " + depth, h+20, 50)
+    ctx.fillText("Computer Move: " + tile_to_letternumber(current_best_move[0]) + " to " + tile_to_letternumber(current_best_move[1]), h+20, 100)
+    ctx.fillText("Time Spent: " + (Date.now() - t0)/1000 + " seconds", h+20, 150)
+
+    return current_best_move
+}
+
+//Makes the computer move the best move within timeframe
+function computer_move(time = 1) {
+    move(best_in_time(player_to_move(), time))
+    ctx.fillText("Evaluation: " + evaluate(), h+20, 200)
+    update()
+}
+
+function play_the_computer() {
+    if(computer_playing) computer_playing = false
+    else computer_playing = true
+    console.log(computer_playing)
+}
+
+//Generates standard chess position
+FEN_generate("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")

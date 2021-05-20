@@ -1,9 +1,10 @@
 <html>
-
     <body>
         <link rel="stylesheet" type="text/css" href="style.css">
-        
-        <button onclick="get_dev()">Developer mode ON/OFF</button>
+            <button onclick="get_dev()">Developer mode ON/OFF</button>
+        </br>
+            <input size="5" id="Average_time" value="5"></input>
+            <button onclick="play_the_computer()">Play white against computer ON/OFF</button>
         <div id="dev_buttons">
             <input size="50px" id="FEN_input" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"></input>
             <button onclick="FEN_generate(document.getElementById('FEN_input').value)">Generate from FEN</button>
@@ -27,14 +28,8 @@
             </br>
             <button onclick="unmake_lm(); update()">Undo move</button>
         </br>
-
-            
         </div>
-        
-        </br>
             <canvas id="visuals" style="border: 1px solid #000000"></canvas>
-            
-        
-        <script src="chess2.js"></script>
+        <script src="chess.js"></script>
     </body>
 </html>
